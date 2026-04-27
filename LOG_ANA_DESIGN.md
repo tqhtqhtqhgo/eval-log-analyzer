@@ -25,3 +25,23 @@
 - JSON 文件支持普通 JSON、JSON 数组、JSONL 和多个 JSON 对象连续写入。
 - `.xlsx` 缺失时不报错；存在时用首行作为表头读取为字典列表。
 - `duplicate_result.json` 当前阶段只记录存在性和条数，不做复杂循环检测。
+
+## log 解析规则
+
+`.log` 优先逐行按 JSONL 解析；遇到多行 JSON 对象时用括号深度合并后解析。坏记录不终止整体流程，只增加 `parse_error_count`。
+
+request 记录通过 `requests` 字段识别。response / exception 记录通过 `status_code`、`exception`、`respMsg`、`output_reason`、`usage` 任一字段识别。
+
+## attempt 成功/失败判定规则
+
+attempt 成功必须同时满足：有 response、`status_code == 200`、没有 `exception`、没有 `output_reason`、`respMsg.content` 或顶层 `content` 非空。否则判定失败。
+
+失败原因优先级为：`exception`、`output_reason`、非 200 `status_code`、content 为空、`missing_response`、`missing_request`、`unknown_error`。
+
+## retry 链路构建方式
+
+按 log 出现顺序扫描。每个 request 创建新 attempt；后续第一个同 req_id response 绑定到最近未绑定 response 的 attempt。没有 request 的 response 会创建 orphan attempt 并标记 `missing_request`；日志结束仍无 response 的 request 标记 `missing_response`。
+
+## response 长度计算规则
+
+按需求优先级读取 `usage.completion_tokens`、`usage.complete_tokens`、`token_num`、`reasoning_token + content_token`、`total_chunk`、`reasoning_chunk + content_chunk`，最后退化为 response 文本长度。
