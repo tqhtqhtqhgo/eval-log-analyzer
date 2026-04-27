@@ -1,0 +1,17 @@
+[project]
+name = "eval-log-analyzer"
+version = "0.1.0"
+description = "Generate static HTML reports for evaluation logs."
+requires-python = ">=3.10"
+dependencies = [
+    "openpyxl>=3.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
