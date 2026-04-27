@@ -15,4 +15,13 @@
 
 ## 当前假设
 
-初始骨架阶段仅提供模块边界，后续任务逐步补齐数据流、解析规则和渲染规则。
+## 数据流
+
+`analysis_html` 接收 zip 路径，`loader` 解压到临时目录并发现关键文件。`.log` 是必选文件；xlsx、export、empty、overlength、timeout、duplicate 均为可选文件。读取完成后临时目录自动清理，后续模块只消费内存中的结构化数据。
+
+## 文件读取规则
+
+- `.log` 按 UTF-8 文本读取，遇到非法字符使用替换策略。
+- JSON 文件支持普通 JSON、JSON 数组、JSONL 和多个 JSON 对象连续写入。
+- `.xlsx` 缺失时不报错；存在时用首行作为表头读取为字典列表。
+- `duplicate_result.json` 当前阶段只记录存在性和条数，不做复杂循环检测。

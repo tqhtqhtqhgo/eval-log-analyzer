@@ -10,6 +10,10 @@
 uv run pytest -q
 ```
 
+## 输入 zip 文件要求
+
+压缩包中至少需要一个 `.log` 文件。`*_export_data_list.json`、`.xlsx`、`*_empty_result.json`、`*_overlength_result.json`、`*_timeout.json`、`*_duplicate_result.json` 都是可选文件；缺失时报告会降级展示已有信息。
+
 ## Python 调用
 
 ```python
