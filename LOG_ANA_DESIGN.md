@@ -45,3 +45,13 @@ attempt 成功必须同时满足：有 response、`status_code == 200`、没有 
 ## response 长度计算规则
 
 按需求优先级读取 `usage.completion_tokens`、`usage.complete_tokens`、`token_num`、`reasoning_token + content_token`、`total_chunk`、`reasoning_chunk + content_chunk`，最后退化为 response 文本长度。
+
+## 指标统计规则
+
+`metrics` 同时消费 `export_data_list` 和 log trace。export 侧统计总数、通过数、通过率、`eval_result` 分布、token 均值、耗时均值、retry、timeout 和 exception 分布。log trace 侧统计 req_id 总数、最终成功/失败、retry req_id、retry 最终成功和 parse error。
+
+empty、overlength、timeout、duplicate 文件只做基础摘要。duplicate 当前仅展示存在性和条数，不做 COT 循环深度分析。
+
+## hash_id 聚合规则
+
+按 request 中的 `hash_id` 分组，组内 response 长度取最终 attempt 的平均值。正确次数来自 export 中同 req_id 的 `eval_result`，总次数优先使用 `repeat_group_size`，为空时使用该 hash_id 下 req_id 数量。
