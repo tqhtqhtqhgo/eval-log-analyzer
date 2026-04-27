@@ -20,7 +20,11 @@ def render_html(
     """渲染单文件静态 HTML。"""
     traces = traces or []
     attempt_payload = _attempt_payload(traces)
-    js = f"window.__evalLogAnalyzer = {{attempts: {to_json_script(attempt_payload)}}};\n{BASE_JS}"
+    hash_payload = _hash_group_payload(metrics, traces)
+    js = (
+        "window.__evalLogAnalyzer = "
+        f"{{attempts: {to_json_script(attempt_payload)}, hashGroups: {to_json_script(hash_payload)}}};\n{BASE_JS}"
+    )
     body = "\n".join(
         [
             "<main>",
@@ -30,6 +34,7 @@ def render_html(
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(traces, max_attempt_columns),
             _render_response_length_chart(traces),
+            _render_hash_repeat_chart(metrics, enable_hash_repeat_chart),
             "</main>",
             _render_modal(),
         ]
@@ -132,6 +137,23 @@ def _render_response_length_chart(traces: list[ReqTrace]) -> str:
     return f"<section><h2>response 长度分布图</h2>{''.join(rows)}</section>"
 
 
+def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
+    if not enabled:
+        return ""
+    groups = metrics.hash_repeat_groups
+    max_length = max((group["avg_response_length"] for group in groups), default=0) or 1
+    rows = []
+    for group in groups:
+        width = max(2, round(float(group["avg_response_length"]) / max_length * 100)) if group["avg_response_length"] else 0
+        status = "ok" if group["correct_count"] > 0 else "bad"
+        rows.append(
+            f"<div class=\"length-row\" onclick=\"elaOpenHash('{group['id']}')\">"
+            f"<div>{group['id']}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
+            f"<div class=\"length-value\">{_escape(group['avg_response_length'])} {group['correct_count']}/{group['total_count']}</div></div>"
+        )
+    return f"<section><h2>hash_id 重复评测聚合图</h2>{''.join(rows)}</section>"
+
+
 def _render_modal() -> str:
     return """
 <div id="json-modal" class="modal-backdrop" onclick="if(event.target===this) elaCloseModal()">
@@ -191,6 +213,27 @@ def _attempt_payload(traces: list[ReqTrace]) -> dict[str, Any]:
                 "request_json": attempt.request_json,
                 "response_json": attempt.response_json,
             }
+    return payload
+
+
+def _hash_group_payload(metrics: Metrics, traces: list[ReqTrace]) -> dict[str, Any]:
+    trace_by_req = {trace.req_id: trace for trace in traces}
+    payload: dict[str, Any] = {}
+    for group in metrics.hash_repeat_groups:
+        items = []
+        for req_id in group["req_ids"]:
+            trace = trace_by_req.get(req_id)
+            final_attempt = trace.final_attempt if trace else None
+            items.append(
+                {
+                    "req_id": req_id,
+                    "final_success": trace.final_success if trace else False,
+                    "response_length": trace.final_response_length if trace else 0,
+                    "request_json": final_attempt.request_json if final_attempt else None,
+                    "response_json": final_attempt.response_json if final_attempt else None,
+                }
+            )
+        payload[str(group["id"])] = {**group, "items": items}
     return payload
 
 

@@ -63,6 +63,17 @@ function elaOpenAttempt(id) {
   elaRenderJson();
   document.getElementById('json-modal').classList.add('open');
 }
+function elaOpenHash(id) {
+  const data = window.__evalLogAnalyzer.hashGroups[id];
+  if (!data) return;
+  modalState.current = { request_json: null, response_json: data };
+  modalState.full = false;
+  document.getElementById('modal-title').textContent = `hash_id ${data.hash_id}`;
+  document.getElementById('modal-meta').textContent = `req_id=${data.req_ids.join(', ')} 平均长度=${data.avg_response_length} 正确=${data.correct_count}/${data.total_count}`;
+  document.getElementById('modal-failure').textContent = data.correct_count > 0 ? '' : '正确次数为 0';
+  elaRenderJson();
+  document.getElementById('json-modal').classList.add('open');
+}
 function elaRenderJson() {
   const data = modalState.current;
   if (!data) return;

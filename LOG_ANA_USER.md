@@ -34,3 +34,7 @@ print(html_path)
 ## response 长度分布图
 
 response 长度分布图按 req_id 展示最终 attempt 的 response 长度。绿色表示最终成功，红色表示最终失败；点击行可以查看最终 attempt 的 JSON。
+
+## hash_id 重复评测聚合图
+
+调用 `analysis_html(..., enable_hash_repeat_chart=True)` 时会显示 hash_id 聚合图。每行展示平均 response 长度和 `正确次数/总次数`，总次数可用 `repeat_group_size` 指定。

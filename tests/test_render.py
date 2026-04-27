@@ -20,7 +20,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     )
     output = tmp_path / "report.html"
 
-    render_html(str(output), metrics, parsed.traces)
+    render_html(str(output), metrics, parsed.traces, enable_hash_repeat_chart=True)
     html = output.read_text(encoding="utf-8")
 
     assert "评测日志分析报告" in html
@@ -29,6 +29,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "重试链路表" in html
     assert "response 长度分布图" in html
     assert "length-row" in html
+    assert "hash_id 重复评测聚合图" in html
+    assert "elaOpenHash" in html
     assert "r1" in html
     assert "elaOpenAttempt" in html
     assert "json-modal" in html
