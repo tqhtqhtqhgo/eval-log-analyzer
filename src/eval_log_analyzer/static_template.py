@@ -28,8 +28,54 @@ table { width: 100%; border-collapse: collapse; border: 1px solid var(--line); }
 th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
 th { background: #eef3f8; font-weight: 650; }
 .muted { color: var(--muted); }
+button { border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 6px 9px; cursor: pointer; }
+input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; margin: 0 0 12px; }
+.status-btn { min-width: 36px; font-size: 18px; line-height: 1; }
+.final-ok { color: var(--ok); font-weight: 700; }
+.final-bad, .failure { color: var(--bad); font-weight: 700; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 10; }
+.modal-backdrop.open { display: flex; }
+.modal { background: #fff; border-radius: 8px; width: min(980px, 96vw); max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--line); }
+.modal-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.modal-body { padding: 14px 16px; overflow: auto; }
+.modal-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; max-height: 55vh; white-space: pre-wrap; word-break: break-word; }
 """
 
 BASE_JS = """
 window.__evalLogAnalyzer = window.__evalLogAnalyzer || {};
+const modalState = { current: null, full: false };
+function elaData(id) { return window.__evalLogAnalyzer.attempts[id]; }
+function elaOpenAttempt(id) {
+  const data = elaData(id);
+  if (!data) return;
+  modalState.current = data;
+  modalState.full = false;
+  document.getElementById('modal-title').textContent = `${data.req_id} / t${data.attempt_index} / ${data.success ? '成功' : '失败'}`;
+  document.getElementById('modal-meta').textContent = `used_time=${data.used_time ?? '-'} response_length=${data.response_length ?? 0}`;
+  document.getElementById('modal-failure').textContent = data.failure_reason || '';
+  elaRenderJson();
+  document.getElementById('json-modal').classList.add('open');
+}
+function elaRenderJson() {
+  const data = modalState.current;
+  if (!data) return;
+  const payload = { request: data.request_json, response: data.response_json };
+  let text = JSON.stringify(payload, null, 2);
+  if (!modalState.full && text.length > 51200) text = text.slice(0, 51200) + '\\n... 已截断，点击显示完整 JSON';
+  document.getElementById('modal-json').textContent = text;
+}
+function elaShowFull() { modalState.full = true; elaRenderJson(); }
+function elaCloseModal() { document.getElementById('json-modal').classList.remove('open'); }
+function elaCopyJson() {
+  const text = document.getElementById('modal-json').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(text);
+}
+function elaFilterRetry(value) {
+  const keyword = value.trim().toLowerCase();
+  for (const row of document.querySelectorAll('[data-retry-row]')) {
+    const haystack = row.getAttribute('data-search') || '';
+    row.style.display = haystack.includes(keyword) ? '' : 'none';
+  }
+}
 """

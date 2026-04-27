@@ -26,3 +26,7 @@ print(html_path)
 ## 输出 HTML 说明
 
 默认输出到 zip 同目录，文件名为 `{zip_stem}_analysis.html`。HTML 是单个静态文件，包含内联 CSS 和 JS，可以直接用浏览器打开，不需要启动服务。
+
+## 重试链路表
+
+重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态。点击状态符号或最终结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。

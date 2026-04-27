@@ -26,6 +26,10 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "评测日志分析报告" in html
     assert "m1" in html
     assert "异常摘要" in html
+    assert "重试链路表" in html
+    assert "r1" in html
+    assert "elaOpenAttempt" in html
+    assert "json-modal" in html
     assert "https://" not in html
     assert "http://" not in html
     assert "cdn" not in html.lower()
