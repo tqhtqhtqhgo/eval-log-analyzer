@@ -27,6 +27,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "m1" in html
     assert "异常摘要" in html
     assert "重试链路表" in html
+    assert "response 长度分布图" in html
+    assert "length-row" in html
     assert "r1" in html
     assert "elaOpenAttempt" in html
     assert "json-modal" in html

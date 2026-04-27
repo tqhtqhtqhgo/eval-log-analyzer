@@ -30,3 +30,7 @@ print(html_path)
 ## 重试链路表
 
 重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态。点击状态符号或最终结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。
+
+## response 长度分布图
+
+response 长度分布图按 req_id 展示最终 attempt 的 response 长度。绿色表示最终成功，红色表示最终失败；点击行可以查看最终 attempt 的 JSON。

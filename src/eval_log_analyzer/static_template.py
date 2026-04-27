@@ -33,6 +33,12 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .status-btn { min-width: 36px; font-size: 18px; line-height: 1; }
 .final-ok { color: var(--ok); font-weight: 700; }
 .final-bad, .failure { color: var(--bad); font-weight: 700; }
+.length-row { display: grid; grid-template-columns: 48px 1fr 80px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.bar-track { height: 12px; background: #eef3f8; border-radius: 6px; overflow: hidden; }
+.bar { height: 100%; min-width: 2px; }
+.bar.ok { background: var(--ok); }
+.bar.bad { background: var(--bad); }
+.length-value { text-align: right; font-variant-numeric: tabular-nums; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 10; }
 .modal-backdrop.open { display: flex; }
 .modal { background: #fff; border-radius: 8px; width: min(980px, 96vw); max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--line); }

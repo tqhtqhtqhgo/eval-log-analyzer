@@ -29,6 +29,7 @@ def render_html(
             _render_core_cards(metrics),
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(traces, max_attempt_columns),
+            _render_response_length_chart(traces),
             "</main>",
             _render_modal(),
         ]
@@ -113,6 +114,22 @@ def _render_retry_table(traces: list[ReqTrace], max_attempt_columns: int) -> str
         "<input type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry(this.value)\">"
         f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
+
+
+def _render_response_length_chart(traces: list[ReqTrace]) -> str:
+    max_length = max((trace.final_response_length for trace in traces), default=0) or 1
+    rows = []
+    for trace in traces:
+        width = max(2, round(trace.final_response_length / max_length * 100)) if trace.final_response_length else 0
+        status = "ok" if trace.final_success else "bad"
+        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        title = f"req_id={trace.req_id} prompt={trace.prompt} 长度={trace.final_response_length} 最终结果={'成功' if trace.final_success else '失败'}"
+        rows.append(
+            f"<div class=\"length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\">"
+            f"<div>{trace.row_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
+            f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
+        )
+    return f"<section><h2>response 长度分布图</h2>{''.join(rows)}</section>"
 
 
 def _render_modal() -> str:
