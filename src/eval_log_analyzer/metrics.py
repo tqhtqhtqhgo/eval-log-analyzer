@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any
@@ -56,12 +57,13 @@ def build_hash_repeat_groups(
     export_data_list: list[dict[str, Any]] | None,
     repeat_group_size: int | None = None,
 ) -> list[dict[str, Any]]:
-    """按 hash_id 聚合重复评测数据。"""
+    """按 prompt 计算出的稳定 hash_id 聚合重复评测数据。"""
     eval_by_req = {str(row.get("req_id")): _is_pass(row.get("eval_result")) for row in export_data_list or []}
     groups: dict[str, list[ReqTrace]] = defaultdict(list)
     for trace in traces:
-        if trace.hash_id:
-            groups[trace.hash_id].append(trace)
+        # 部分真实日志里同一 user message 会带不同 hash_id，因此重复评测聚合以 prompt 自算 hash 为准。
+        group_hash_id = _computed_hash_id(trace)
+        groups[group_hash_id].append(trace)
 
     result = []
     for index, (hash_id, group_traces) in enumerate(groups.items(), start=1):
@@ -87,6 +89,19 @@ def build_hash_repeat_groups(
             }
         )
     return result
+
+
+def _computed_hash_id(trace: ReqTrace) -> str:
+    prompt = _normalize_prompt(trace.prompt)
+    if prompt:
+        return hashlib.md5(prompt.encode("utf-8")).hexdigest()
+    if trace.hash_id:
+        return trace.hash_id
+    return f"req_id:{trace.req_id}"
+
+
+def _normalize_prompt(prompt: str | None) -> str:
+    return " ".join(str(prompt or "").split())
 
 
 def _export_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

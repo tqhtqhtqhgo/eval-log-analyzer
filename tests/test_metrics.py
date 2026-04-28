@@ -52,14 +52,16 @@ def test_hash_repeat_groups() -> None:
         """
 {"req_id":"r1","hash_id":"h1","requests":{"messages":[{"role":"user","content":"p"}]}}
 {"req_id":"r1","status_code":200,"usage":{"completion_tokens":10},"respMsg":{"content":"ok"}}
-{"req_id":"r2","hash_id":"h1","requests":{"messages":[{"role":"user","content":"p"}]}}
+{"req_id":"r2","hash_id":"different_hash","requests":{"messages":[{"role":"user","content":"p"}]}}
 {"req_id":"r2","status_code":200,"usage":{"completion_tokens":20},"respMsg":{"content":"ok"}}
 """
     )
 
     groups = build_hash_repeat_groups(parsed.traces, [{"req_id": "r1", "eval_result": "TRUE"}], 3)
 
-    assert groups[0]["hash_id"] == "h1"
+    assert len(groups) == 1
+    assert groups[0]["hash_id"] == "83878c91171338902e0fe0fb97a8c47a"
+    assert groups[0]["req_ids"] == ["r1", "r2"]
     assert groups[0]["avg_response_length"] == 15
     assert groups[0]["correct_count"] == 1
     assert groups[0]["total_count"] == 3
