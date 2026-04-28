@@ -33,6 +33,7 @@ def render_html(
             _render_core_cards(metrics),
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(traces, max_attempt_columns),
+            _render_compact_response_length_chart(traces),
             _render_response_length_chart(traces),
             _render_hash_repeat_chart(metrics, enable_hash_repeat_chart),
             "</main>",
@@ -135,6 +136,21 @@ def _render_response_length_chart(traces: list[ReqTrace]) -> str:
             f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
         )
     return f"<section><h2>response 长度分布图</h2>{''.join(rows)}</section>"
+
+
+def _render_compact_response_length_chart(traces: list[ReqTrace]) -> str:
+    max_length = max((trace.final_response_length for trace in traces), default=0) or 1
+    lines = []
+    for trace in traces:
+        height = max(1, round(trace.final_response_length / max_length * 100)) if trace.final_response_length else 1
+        status = "ok" if trace.final_success else "bad"
+        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        title = f"id={trace.row_id} req_id={trace.req_id} 长度={trace.final_response_length}"
+        lines.append(
+            f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
+            f"style=\"height:{height}%\" onclick=\"elaOpenAttempt('{final_id}')\"></div>"
+        )
+    return f"<section><h2>response 长度紧凑分布图</h2><div class=\"compact-length-chart\">{''.join(lines)}</div></section>"
 
 
 def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:

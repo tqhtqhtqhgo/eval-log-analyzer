@@ -27,6 +27,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "m1" in html
     assert "异常摘要" in html
     assert "重试链路表" in html
+    assert "response 长度紧凑分布图" in html
+    assert "compact-length-line" in html
     assert "response 长度分布图" in html
     assert "length-row" in html
     assert "hash_id 重复评测聚合图" in html

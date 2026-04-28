@@ -39,6 +39,10 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .bar.ok { background: var(--ok); }
 .bar.bad { background: var(--bad); }
 .length-value { text-align: right; font-variant-numeric: tabular-nums; }
+.compact-length-chart { height: 220px; width: 100%; display: flex; align-items: flex-end; gap: 1px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; overflow: hidden; }
+.compact-length-line { flex: 1 1 1px; min-width: 1px; max-width: 4px; border-radius: 2px 2px 0 0; cursor: pointer; }
+.compact-length-line.ok { background: var(--ok); }
+.compact-length-line.bad { background: var(--bad); }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 10; }
 .modal-backdrop.open { display: flex; }
 .modal { background: #fff; border-radius: 8px; width: min(980px, 96vw); max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--line); }
