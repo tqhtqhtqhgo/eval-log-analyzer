@@ -7,7 +7,7 @@
 ## 模块架构
 
 - `analyzer.py`：对外入口，校验输入并串联 loader、parser、metrics、render。
-- `loader.py`：解压 zip、发现关键文件、读取 log、JSON 和 xlsx。
+- `loader.py`：直接从 zip 内发现关键文件，读取 log、JSON 和 xlsx。
 - `parser.py`：解析 log，构建 `ReqTrace` 和 `Attempt`。
 - `metrics.py`：计算 export 指标、trace 指标、异常摘要和 hash_id 聚合。
 - `render.py`：生成单文件 HTML，渲染卡片、表格、图表和弹窗。
@@ -15,7 +15,7 @@
 
 ## 数据流
 
-`analysis_html(zip_path)` 校验 zip 路径后调用 `load_eval_zip`。loader 将 zip 解压到临时目录，读取必选 `.log` 和可选 json/xlsx 文件，返回内存对象并自动清理临时目录。parser 消费 log 文本生成 trace；metrics 消费 trace、export、异常文件生成统计；render 将统计和 trace 写入单个 HTML。
+`analysis_html(zip_path)` 校验 zip 路径后调用 `load_eval_zip`。loader 不落盘解压，直接从 zip 内读取必选 `.log` 和可选 json/xlsx 文件，避免长路径问题。parser 消费 log 文本生成 trace；metrics 消费 trace、export、异常文件生成统计；render 将统计和 trace 写入单个 HTML。
 
 ## 文件发现和读取规则
 
