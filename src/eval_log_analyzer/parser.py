@@ -89,7 +89,7 @@ def parse_log(log_text: str) -> ParseResult:
                 attempt.missing_response = not attempt.missing_request
                 attempt.success = False
                 attempt.failure_reason = "missing_request" if attempt.missing_request else "missing_response"
-        final_attempt = attempts[-1] if attempts else None
+        final_attempt = _final_attempt(attempts)
         traces.append(
             ReqTrace(
                 req_id=req_id,
@@ -271,6 +271,14 @@ def _find_open_attempt(attempts: list[Attempt] | None) -> Attempt | None:
         if attempt.response_json is None:
             return attempt
     return None
+
+
+def _final_attempt(attempts: list[Attempt]) -> Attempt | None:
+    """最终链路优先取成功 attempt；多次重试中任一次成功即视为最终成功。"""
+    for attempt in reversed(attempts):
+        if attempt.success:
+            return attempt
+    return attempts[-1] if attempts else None
 
 
 def _to_int(value: Any) -> int | None:

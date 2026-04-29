@@ -33,6 +33,23 @@ def test_parse_retry_first_fail_then_success() -> None:
     assert trace.final_success is True
 
 
+def test_parse_retry_any_success_counts_as_final_success() -> None:
+    result = parse_log(
+        """
+{"req_id":"r2","requests":{"messages":[{"role":"user","content":"p2"}]}}
+{"req_id":"r2","status_code":200,"token_num":3,"respMsg":{"content":"ok"}}
+{"req_id":"r2","requests":{"messages":[{"role":"user","content":"p2"}]}}
+{"req_id":"r2","status_code":500,"respMsg":{"content":"bad"}}
+"""
+    )
+
+    trace = result.traces[0]
+    assert [a.success for a in trace.attempts] == [True, False]
+    assert trace.final_success is True
+    assert trace.final_attempt.attempt_index == 1
+    assert trace.final_response_length == 3
+
+
 def test_parse_final_fail_content_empty() -> None:
     result = parse_log(
         """

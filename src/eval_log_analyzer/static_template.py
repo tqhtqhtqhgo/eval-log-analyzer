@@ -71,7 +71,7 @@ pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; ov
 BASE_JS = """
 window.__evalLogAnalyzer = window.__evalLogAnalyzer || {};
 const modalState = { current: null, full: false };
-const retryFilterState = { failureOnly: false };
+const retryFilterState = { failureOnly: false, evalFailedOnly: false };
 function elaData(id) { return window.__evalLogAnalyzer.attempts[id]; }
 function elaOpenAttempt(id) {
   const data = elaData(id);
@@ -115,13 +115,22 @@ function elaToggleFailureFilter() {
   if (button) button.classList.toggle('active', retryFilterState.failureOnly);
   elaFilterRetry();
 }
+function elaToggleEvalFailedFilter() {
+  retryFilterState.evalFailedOnly = !retryFilterState.evalFailedOnly;
+  const button = document.getElementById('eval-failed-filter');
+  if (button) button.classList.toggle('active', retryFilterState.evalFailedOnly);
+  elaFilterRetry();
+}
 function elaFilterRetry() {
   const input = document.getElementById('retry-search');
   const keyword = (input ? input.value : '').trim().toLowerCase();
   for (const row of document.querySelectorAll('[data-retry-row]')) {
     const haystack = row.getAttribute('data-search') || '';
     const hasFailure = row.getAttribute('data-has-failure') === 'true';
-    row.style.display = haystack.includes(keyword) && (!retryFilterState.failureOnly || hasFailure) ? '' : 'none';
+    const evalFailed = row.getAttribute('data-eval-failed') === 'true';
+    row.style.display = haystack.includes(keyword)
+      && (!retryFilterState.failureOnly || hasFailure)
+      && (!retryFilterState.evalFailedOnly || evalFailed) ? '' : 'none';
   }
 }
 """

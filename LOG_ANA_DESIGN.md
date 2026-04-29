@@ -49,7 +49,7 @@ attempt 成功必须同时满足：
 
 ## retry 链路构建方式
 
-按 log 出现顺序扫描。每遇到 request 创建一个新的 attempt；后续第一个相同 req_id 的 response/exception 绑定到最近尚未绑定 response 的 attempt。找不到 request 的 response 会创建 orphan attempt 并标记 `missing_request`；日志结束仍没有 response 的 request 标记 `missing_response`。同一 req_id 的最终结果由最后一个 attempt 决定。
+按 log 出现顺序扫描。每遇到 request 创建一个新的 attempt；后续第一个相同 req_id 的 response/exception 绑定到最近尚未绑定 response 的 attempt。找不到 request 的 response 会创建 orphan attempt 并标记 `missing_request`；日志结束仍没有 response 的 request 标记 `missing_response`。同一 req_id 的最终链路优先取最后一次成功 attempt；多次重试中只要出现一次成功，即视为最终链路成功。如果没有任何成功 attempt，则取最后一个 attempt 作为最终失败链路。
 
 ## response 长度计算规则
 
@@ -92,7 +92,7 @@ hash_id 重复评测聚合图按聚合 hash 升序排序，因此不同评测报
 - 基础信息卡片：评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名、zip 文件名。
 - 核心指标卡片：平均 token、平均耗时、retry、最终失败、empty、overlength、timeout；complete tokens、reasoning tokens、content tokens、used_time 同时显示箱线图。
 - 异常摘要表：empty、overlength、timeout、duplicate、parse_error、export_exception。
-- 重试链路表：每个 req_id 一行，t1..tN 仅显示状态符号，不在主表展开 reasoning/content；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
+- 重试链路表：每个 req_id 一行，t1..tN 仅显示状态符号，不在主表展开 reasoning/content；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
 - response 长度紧凑分布图：按 user prompt 稳定 hash 排序，每个 req_id 对应一条紧凑横线，不直接标注长度，hover 显示 id、req_id、长度和评测结果。
 - response 长度分布图：与重试链路表使用相同稳定排序和序号。绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错。
 - hash_id 重复评测聚合紧凑分布图和聚合图：仅在 `enable_hash_repeat_chart=True` 时显示，按聚合 hash 升序排序。

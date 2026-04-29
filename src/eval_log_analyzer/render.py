@@ -122,9 +122,11 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         eval_text = _eval_text(eval_result)
         eval_class = _status_class(trace, eval_result)
         has_failure = any(not attempt.success for attempt in trace.attempts)
+        eval_failed = eval_result is False
         search_text = " ".join([trace.req_id, trace.prompt] + [a.failure_reason for a in trace.attempts]).lower()
         rows.append(
-            f"<tr data-retry-row data-has-failure=\"{str(has_failure).lower()}\" data-search=\"{_escape(search_text)}\">"
+            f"<tr data-retry-row data-has-failure=\"{str(has_failure).lower()}\" "
+            f"data-eval-failed=\"{str(eval_failed).lower()}\" data-search=\"{_escape(search_text)}\">"
             f"<td>{display_id}</td><td>{_escape(trace.req_id)}</td>"
             + "".join(attempt_cells)
             + f"<td><button class=\"{final_class}\" onclick=\"elaOpenAttempt('{final_id}')\">{final_symbol}</button></td>"
@@ -133,7 +135,8 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
     return (
         "<section><h2>重试链路表</h2>"
         "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
-        "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button></div>"
+        "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
+        "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button></div>"
         f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
