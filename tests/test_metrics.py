@@ -37,6 +37,8 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert metrics.export_summary["pass_rate"] == 0.5
     assert metrics.export_summary["avg_complete_tokens"] == 15
     assert metrics.export_summary["avg_used_time"] == 2
+    assert metrics.export_summary["boxplots"]["complete_tokens"]["median"] == 15
+    assert metrics.eval_results == {"r1": True, "r2": False}
     assert metrics.export_summary["retry_count"] == 1
     assert metrics.export_summary["retry_success_count"] == 1
     assert metrics.trace_summary["retry_req_id_count"] == 1
@@ -65,3 +67,18 @@ def test_hash_repeat_groups() -> None:
     assert groups[0]["avg_response_length"] == 15
     assert groups[0]["correct_count"] == 1
     assert groups[0]["total_count"] == 3
+
+
+def test_hash_repeat_groups_are_sorted_by_stable_hash() -> None:
+    parsed = parse_log(
+        """
+{"req_id":"r_b","requests":{"messages":[{"role":"user","content":"b"}]}}
+{"req_id":"r_b","status_code":200,"usage":{"completion_tokens":20},"respMsg":{"content":"ok"}}
+{"req_id":"r_a","requests":{"messages":[{"role":"user","content":"a"}]}}
+{"req_id":"r_a","status_code":200,"usage":{"completion_tokens":10},"respMsg":{"content":"ok"}}
+"""
+    )
+
+    groups = build_hash_repeat_groups(parsed.traces, [])
+
+    assert [group["req_ids"] for group in groups] == [["r_a"], ["r_b"]]

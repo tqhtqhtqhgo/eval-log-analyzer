@@ -64,15 +64,17 @@ print(html_path)
 
 基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。
 
-核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终失败数量、empty 数量、overlength 数量和 timeout 数量。
+核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终失败数量、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens 和 used_time 会保留平均值，并在同一卡片内展示箱线图，便于查看全量数据分布。
 
-重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态。点击状态符号或最终结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。
+重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态，最后一列展示该题评测结果是做对还是做错。点击状态符号或最终链路结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。“只看过程失败”按钮会筛出过程中出现失败的题，包括最终失败和重试后成功的题。
 
-response 长度分布图按 req_id 展示最终 attempt 的 response 长度。绿色表示最终成功，红色表示最终失败；点击行可以查看最终 attempt 的 JSON。
+重试链路表、response 长度紧凑分布图和 response 长度分布图都按 user content/prompt 的稳定 hash 排序，因此多次评测中同一题的位置会尽量保持一致。
 
-response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细竖线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id 和长度。
+response 长度分布图按 req_id 展示最终 attempt 的 response 长度。绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
 
-调用 `analysis_html(..., enable_hash_repeat_chart=True)` 时会显示 hash_id 聚合图。聚合用的 hash_id 由 user message/prompt 规范化后重新计算，避免真实日志中同一 prompt 但原始 hash_id 不一致导致分组错误。每行展示平均 response 长度和 `正确次数/总次数`，总次数可用 `repeat_group_size` 指定。
+response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细横线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id、长度和评测结果。
+
+调用 `analysis_html(..., enable_hash_repeat_chart=True)` 时会显示 hash_id 聚合紧凑分布图和 hash_id 聚合图。聚合用的 hash_id 由 user message/prompt 规范化后重新计算，避免真实日志中同一 prompt 但原始 hash_id 不一致导致分组错误。聚合图按 hash 升序排序，每行展示平均 response 长度和 `正确次数/总次数`，总次数可用 `repeat_group_size` 指定。聚合长度同样以 120k token 为满刻度。
 
 ## 常见问题
 

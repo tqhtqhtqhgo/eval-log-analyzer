@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .metrics import Metrics
+from .metrics import Metrics, stable_trace_hash
 from .parser import ReqTrace
 from .static_template import BASE_CSS, BASE_JS, HTML_TEMPLATE
 
@@ -19,7 +19,8 @@ def render_html(
 ) -> str:
     """渲染单文件静态 HTML。"""
     traces = traces or []
-    attempt_payload = _attempt_payload(traces)
+    display_traces = _sorted_traces(traces)
+    attempt_payload = _attempt_payload(display_traces)
     hash_payload = _hash_group_payload(metrics, traces)
     js = (
         "window.__evalLogAnalyzer = "
@@ -32,9 +33,9 @@ def render_html(
             _render_basic_info(metrics.basic_info),
             _render_core_cards(metrics),
             _render_exception_summary(metrics.exception_summary),
-            _render_retry_table(traces, max_attempt_columns),
-            _render_compact_response_length_chart(traces),
-            _render_response_length_chart(traces),
+            _render_retry_table(display_traces, metrics, max_attempt_columns),
+            _render_compact_response_length_chart(display_traces, metrics),
+            _render_response_length_chart(display_traces, metrics),
             _render_hash_repeat_chart(metrics, enable_hash_repeat_chart),
             "</main>",
             _render_modal(),
@@ -63,11 +64,14 @@ def _render_basic_info(info: dict[str, Any]) -> str:
 def _render_core_cards(metrics: Metrics) -> str:
     export = metrics.export_summary
     trace = metrics.trace_summary
+    boxplots = export.get("boxplots") or {}
+    metric_cards = [
+        ("平均 complete tokens", export.get("avg_complete_tokens"), boxplots.get("complete_tokens")),
+        ("平均 reasoning tokens", export.get("avg_reasoning_token"), boxplots.get("reasoning_token")),
+        ("平均 content tokens", export.get("avg_content_token"), boxplots.get("content_token")),
+        ("平均 used_time", export.get("avg_used_time"), boxplots.get("used_time")),
+    ]
     items = [
-        ("平均 complete tokens", export.get("avg_complete_tokens")),
-        ("平均 reasoning tokens", export.get("avg_reasoning_token")),
-        ("平均 content tokens", export.get("avg_content_token")),
-        ("平均 used_time", export.get("avg_used_time")),
         ("平均 total_used_time", export.get("avg_total_used_time")),
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
@@ -76,7 +80,12 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("overlength 数量", export.get("overlength_count")),
         ("timeout 数量", export.get("timeout_attempt_count")),
     ]
-    return "<section><h2>核心指标</h2><div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div></section>"
+    return (
+        "<section><h2>核心指标</h2><div class=\"grid\">"
+        + "".join(_metric_card(k, v, boxplot) for k, v, boxplot in metric_cards)
+        + "".join(_card(k, v) for k, v in items)
+        + "</div></section>"
+    )
 
 
 def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
@@ -90,10 +99,10 @@ def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
     )
 
 
-def _render_retry_table(traces: list[ReqTrace], max_attempt_columns: int) -> str:
+def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_columns: int) -> str:
     headers = "".join(f"<th>t{i}</th>" for i in range(1, max_attempt_columns + 1))
     rows = []
-    for trace in traces:
+    for display_id, trace in enumerate(traces, start=1):
         attempt_cells = []
         for index in range(max_attempt_columns):
             attempt = trace.attempts[index] if index < len(trace.attempts) else None
@@ -106,49 +115,54 @@ def _render_retry_table(traces: list[ReqTrace], max_attempt_columns: int) -> str
             )
         if len(trace.attempts) > max_attempt_columns:
             attempt_cells[-1] = f"<td><button onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, trace.attempts[-1].attempt_index)}')\">更多</button></td>"
-        final_symbol = "✅" if trace.final_success else "✖️"
+        final_symbol = "通过" if trace.final_success else "失败"
         final_class = "final-ok" if trace.final_success else "final-bad"
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        eval_result = metrics.eval_results.get(trace.req_id)
+        eval_text = _eval_text(eval_result)
+        eval_class = _status_class(trace, eval_result)
+        has_failure = any(not attempt.success for attempt in trace.attempts)
         search_text = " ".join([trace.req_id, trace.prompt] + [a.failure_reason for a in trace.attempts]).lower()
         rows.append(
-            f"<tr data-retry-row data-search=\"{_escape(search_text)}\"><td>{trace.row_id}</td><td>{_escape(trace.req_id)}</td>"
+            f"<tr data-retry-row data-has-failure=\"{str(has_failure).lower()}\" data-search=\"{_escape(search_text)}\">"
+            f"<td>{display_id}</td><td>{_escape(trace.req_id)}</td>"
             + "".join(attempt_cells)
-            + f"<td><button class=\"{final_class}\" onclick=\"elaOpenAttempt('{final_id}')\">{final_symbol}</button></td></tr>"
+            + f"<td><button class=\"{final_class}\" onclick=\"elaOpenAttempt('{final_id}')\">{final_symbol}</button></td>"
+            + f"<td><span class=\"result-pill {eval_class}\">{eval_text}</span></td></tr>"
         )
     return (
         "<section><h2>重试链路表</h2>"
-        "<input type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry(this.value)\">"
-        f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+        "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
+        "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button></div>"
+        f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
 
-def _render_response_length_chart(traces: list[ReqTrace]) -> str:
-    max_length = max((trace.final_response_length for trace in traces), default=0) or 1
+def _render_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     rows = []
-    for trace in traces:
-        width = max(2, round(trace.final_response_length / max_length * 100)) if trace.final_response_length else 0
-        status = "ok" if trace.final_success else "bad"
+    for display_id, trace in enumerate(traces, start=1):
+        width = _fixed_width(trace.final_response_length)
+        status = _status_class(trace, metrics.eval_results.get(trace.req_id))
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
-        title = f"req_id={trace.req_id} prompt={trace.prompt} 长度={trace.final_response_length} 最终结果={'成功' if trace.final_success else '失败'}"
+        title = f"req_id={trace.req_id} prompt={trace.prompt} 长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
         rows.append(
             f"<div class=\"length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\">"
-            f"<div>{trace.row_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
+            f"<div>{display_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
             f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
         )
     return f"<section><h2>response 长度分布图</h2>{''.join(rows)}</section>"
 
 
-def _render_compact_response_length_chart(traces: list[ReqTrace]) -> str:
-    max_length = max((trace.final_response_length for trace in traces), default=0) or 1
+def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     lines = []
-    for trace in traces:
-        height = max(1, round(trace.final_response_length / max_length * 100)) if trace.final_response_length else 1
-        status = "ok" if trace.final_success else "bad"
+    for display_id, trace in enumerate(traces, start=1):
+        width = _fixed_width(trace.final_response_length)
+        status = _status_class(trace, metrics.eval_results.get(trace.req_id))
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
-        title = f"id={trace.row_id} req_id={trace.req_id} 长度={trace.final_response_length}"
+        title = f"id={display_id} req_id={trace.req_id} 长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
         lines.append(
             f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
-            f"style=\"height:{height}%\" onclick=\"elaOpenAttempt('{final_id}')\"></div>"
+            f"style=\"width:{width}%\" onclick=\"elaOpenAttempt('{final_id}')\"></div>"
         )
     return f"<section><h2>response 长度紧凑分布图</h2><div class=\"compact-length-chart\">{''.join(lines)}</div></section>"
 
@@ -157,17 +171,25 @@ def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
     if not enabled:
         return ""
     groups = metrics.hash_repeat_groups
-    max_length = max((group["avg_response_length"] for group in groups), default=0) or 1
     rows = []
+    compact_lines = []
     for group in groups:
-        width = max(2, round(float(group["avg_response_length"]) / max_length * 100)) if group["avg_response_length"] else 0
+        width = _fixed_width(float(group["avg_response_length"]))
         status = "ok" if group["correct_count"] > 0 else "bad"
+        title = f"hash_id={group['hash_id']} 平均长度={group['avg_response_length']} 正确={group['correct_count']}/{group['total_count']}"
         rows.append(
-            f"<div class=\"length-row\" onclick=\"elaOpenHash('{group['id']}')\">"
+            f"<div class=\"length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenHash('{group['id']}')\">"
             f"<div>{group['id']}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
             f"<div class=\"length-value\">{_escape(group['avg_response_length'])} {group['correct_count']}/{group['total_count']}</div></div>"
         )
-    return f"<section><h2>hash_id 重复评测聚合图</h2>{''.join(rows)}</section>"
+        compact_lines.append(
+            f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
+            f"style=\"width:{width}%\" onclick=\"elaOpenHash('{group['id']}')\"></div>"
+        )
+    return (
+        f"<section><h2>hash_id 重复评测聚合紧凑分布图</h2><div class=\"compact-length-chart\">{''.join(compact_lines)}</div></section>"
+        f"<section><h2>hash_id 重复评测聚合图</h2>{''.join(rows)}</section>"
+    )
 
 
 def _render_modal() -> str:
@@ -199,6 +221,45 @@ def _card(label: str, value: Any) -> str:
     return f"<div class=\"card\"><div class=\"label\">{_escape(label)}</div><div class=\"value\">{_escape(display)}</div></div>"
 
 
+def _metric_card(label: str, value: Any, boxplot: dict[str, Any] | None) -> str:
+    if not boxplot:
+        return _card(label, value)
+    chart = _boxplot_html(boxplot)
+    return (
+        f"<div class=\"card metric-card\"><div class=\"label\">{_escape(label)}</div>"
+        f"<div class=\"value\">{_escape(value)}</div>{chart}</div>"
+    )
+
+
+def _boxplot_html(boxplot: dict[str, Any]) -> str:
+    maximum = float(boxplot.get("max") or 0)
+    if maximum <= 0:
+        maximum = 1
+    min_pos = _box_percent(boxplot.get("min"), maximum)
+    q1_pos = _box_percent(boxplot.get("q1"), maximum)
+    median_pos = _box_percent(boxplot.get("median"), maximum)
+    q3_pos = _box_percent(boxplot.get("q3"), maximum)
+    max_pos = _box_percent(boxplot.get("max"), maximum)
+    title = (
+        f"count={boxplot.get('count')} min={boxplot.get('min')} q1={boxplot.get('q1')} "
+        f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')}"
+    )
+    return (
+        f"<div class=\"boxplot\" title=\"{_escape(title)}\">"
+        f"<span class=\"whisker\" style=\"left:{min_pos}%;width:{max(1, max_pos - min_pos)}%\"></span>"
+        f"<span class=\"box\" style=\"left:{q1_pos}%;width:{max(1, q3_pos - q1_pos)}%\"></span>"
+        f"<span class=\"median\" style=\"left:{median_pos}%\"></span></div>"
+        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p50 {boxplot.get('median')} · max {boxplot.get('max')}</div>"
+    )
+
+
+def _box_percent(value: Any, maximum: float) -> int:
+    try:
+        return max(0, min(100, round(float(value) / maximum * 100)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _percent(value: Any) -> str:
     try:
         return f"{float(value) * 100:.2f}%"
@@ -208,6 +269,38 @@ def _percent(value: Any) -> str:
 
 def _escape(value: Any) -> str:
     return html.escape(str(value), quote=True)
+
+
+def _sorted_traces(traces: list[ReqTrace]) -> list[ReqTrace]:
+    return sorted(traces, key=lambda trace: (stable_trace_hash(trace), trace.req_id))
+
+
+def _fixed_width(length: int | float) -> int:
+    try:
+        value = float(length)
+    except (TypeError, ValueError):
+        value = 0
+    if value <= 0:
+        return 0
+    return max(1, min(100, round(value / 120000 * 100)))
+
+
+def _eval_text(value: bool | None) -> str:
+    if value is True:
+        return "做对"
+    if value is False:
+        return "做错"
+    return "-"
+
+
+def _status_class(trace: ReqTrace, eval_result: bool | None) -> str:
+    if eval_result is True:
+        return "ok"
+    if eval_result is False and not trace.final_success:
+        return "warn"
+    if eval_result is False:
+        return "bad"
+    return "ok" if trace.final_success else "bad"
 
 
 def to_json_script(value: Any) -> str:

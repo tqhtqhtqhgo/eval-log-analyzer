@@ -19,6 +19,7 @@ class Metrics:
     trace_summary: dict[str, Any]
     exception_summary: list[dict[str, Any]]
     hash_repeat_groups: list[dict[str, Any]]
+    eval_results: dict[str, bool | None]
 
 
 def calculate_metrics(
@@ -38,6 +39,7 @@ def calculate_metrics(
     export_rows = export_data_list or []
     req_traces = traces or []
     export_summary = _export_summary(export_rows)
+    eval_results = _eval_results(export_rows)
     trace_summary = _trace_summary(req_traces, parse_error_count)
     optional_summary = _optional_file_summary(empty_result, overlength_result, timeout_result, duplicate_result)
     basic_info = _basic_info(xlsx_rows or [], export_rows, export_summary, log_name, zip_name)
@@ -49,6 +51,7 @@ def calculate_metrics(
         trace_summary=trace_summary,
         exception_summary=exception_summary,
         hash_repeat_groups=hash_repeat_groups,
+        eval_results=eval_results,
     )
 
 
@@ -58,15 +61,16 @@ def build_hash_repeat_groups(
     repeat_group_size: int | None = None,
 ) -> list[dict[str, Any]]:
     """按 prompt 计算出的稳定 hash_id 聚合重复评测数据。"""
-    eval_by_req = {str(row.get("req_id")): _is_pass(row.get("eval_result")) for row in export_data_list or []}
+    eval_by_req = _eval_results(export_data_list or [])
     groups: dict[str, list[ReqTrace]] = defaultdict(list)
     for trace in traces:
         # 部分真实日志里同一 user message 会带不同 hash_id，因此重复评测聚合以 prompt 自算 hash 为准。
-        group_hash_id = _computed_hash_id(trace)
+        group_hash_id = stable_trace_hash(trace)
         groups[group_hash_id].append(trace)
 
     result = []
-    for index, (hash_id, group_traces) in enumerate(groups.items(), start=1):
+    for index, hash_id in enumerate(sorted(groups), start=1):
+        group_traces = groups[hash_id]
         lengths = [trace.final_response_length for trace in group_traces]
         correct = sum(1 for trace in group_traces if eval_by_req.get(trace.req_id) is True)
         total = repeat_group_size if repeat_group_size is not None else len(group_traces)
@@ -83,6 +87,7 @@ def build_hash_repeat_groups(
                         "req_id": trace.req_id,
                         "final_success": trace.final_success,
                         "final_response_length": trace.final_response_length,
+                        "eval_result": eval_by_req.get(trace.req_id),
                     }
                     for trace in group_traces
                 ],
@@ -91,7 +96,8 @@ def build_hash_repeat_groups(
     return result
 
 
-def _computed_hash_id(trace: ReqTrace) -> str:
+def stable_trace_hash(trace: ReqTrace) -> str:
+    """返回由 user prompt 计算出的稳定排序和聚合 hash。"""
     prompt = _normalize_prompt(trace.prompt)
     if prompt:
         return hashlib.md5(prompt.encode("utf-8")).hexdigest()
@@ -120,12 +126,27 @@ def _export_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "avg_content_token": _avg(row.get("content_token") for row in rows),
         "avg_used_time": _avg(row.get("used_time") for row in rows),
         "avg_total_used_time": _avg(row.get("total_used_time") for row in rows),
+        "boxplots": {
+            "complete_tokens": _boxplot(row.get("complete_tokens") for row in rows),
+            "reasoning_token": _boxplot(row.get("reasoning_token") for row in rows),
+            "content_token": _boxplot(row.get("content_token") for row in rows),
+            "used_time": _boxplot(row.get("used_time") for row in rows),
+        },
         "retry_count": len(retry_rows),
         "retry_success_count": len(retry_success),
         "timeout_count": sum(1 for row in rows if _to_float(row.get("time_out")) or _to_float(row.get("time_out_times"))),
         "exception_count": len(exception_rows),
         "exception_distribution": dict(Counter(_exception_name(row) for row in exception_rows)),
     }
+
+
+def _eval_results(rows: list[dict[str, Any]]) -> dict[str, bool | None]:
+    results: dict[str, bool | None] = {}
+    for row in rows:
+        req_id = row.get("req_id")
+        if req_id is not None:
+            results[str(req_id)] = _is_pass(row.get("eval_result"))
+    return results
 
 
 def _trace_summary(traces: list[ReqTrace], parse_error_count: int) -> dict[str, Any]:
@@ -293,6 +314,31 @@ def _avg(values: object) -> float:
     numbers = [_to_float(value) for value in values]
     clean = [value for value in numbers if value is not None]
     return round(sum(clean) / len(clean), 2) if clean else 0.0
+
+
+def _boxplot(values: object) -> dict[str, float | int] | None:
+    numbers = sorted(value for value in (_to_float(value) for value in values) if value is not None)
+    if not numbers:
+        return None
+    return {
+        "count": len(numbers),
+        "min": round(numbers[0], 2),
+        "q1": round(_percentile(numbers, 0.25), 2),
+        "median": round(_percentile(numbers, 0.5), 2),
+        "q3": round(_percentile(numbers, 0.75), 2),
+        "max": round(numbers[-1], 2),
+        "avg": round(sum(numbers) / len(numbers), 2),
+    }
+
+
+def _percentile(numbers: list[float], ratio: float) -> float:
+    if len(numbers) == 1:
+        return numbers[0]
+    position = (len(numbers) - 1) * ratio
+    lower = int(position)
+    upper = min(lower + 1, len(numbers) - 1)
+    weight = position - lower
+    return numbers[lower] * (1 - weight) + numbers[upper] * weight
 
 
 def _to_float(value: Any) -> float | None:
