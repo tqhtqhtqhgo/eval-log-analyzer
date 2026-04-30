@@ -64,7 +64,7 @@ print(html_path)
 
 基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。通过题数和通过率根据 `export_data_list.json` 中每个对象的 `eval_result` 判断，支持 `"True"` / `"False"` 字符串。
 
-核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终链路失败数量、推理成功题目数量（不含链路失败）、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens、used_time 和 total_used_time 会保留平均值，并在核心指标下方单独展示竖向箱线图，标出 min、1/4 分位、3/4 分位、中位数和 max。complete/reasoning/content tokens 还会额外展示过滤 0 后的非零箱线图，便于查看有效 token 数据分布。
+核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终链路失败数量、推理成功题目数量（不含链路失败）、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens、used_time 和 total_used_time 会保留平均值，并在核心指标下方单独展示竖向箱线图，标出 min、1/4 分位、3/4 分位、中位数和 max。complete/reasoning/content tokens 还会额外在“tokens推理成功数据”中展示过滤 0 后的箱线图，便于查看有效 token 数据分布。
 
 重试链路最终状态圆环图根据重试链路表的最终链路和 `export_data_list.json` 的 `eval_result` 绘制，分为链路通过且做对、链路通过但做错、链路失败三类。
 

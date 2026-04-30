@@ -113,7 +113,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "做错题目 response 长度" in html
     assert "总样本数 2" in html
     assert "全部数据" in html
-    assert "tokens 非零数据" in html
+    assert "tokens推理成功数据" in html
     assert "complete tokens 非零" in html
     assert "reasoning tokens 非零" in html
     assert "content tokens 非零" in html

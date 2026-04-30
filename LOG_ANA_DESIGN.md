@@ -69,7 +69,7 @@ attempt 成功必须同时满足：
 
 export 侧统计总条数、通过数、通过率、`eval_result` 分布、平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry 条数、retry 成功条数、timeout 条数、exception 条数和 exception 类型分布。基础信息中的通过题数、通过率，以及页面中“做对/做错”的判断都以 `export_data_list.json` 每个对象的 `eval_result` 为准，支持字符串 `"True"` / `"False"` 以及同义大小写写法。
 
-核心指标中的 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时计算箱线图数据，包含 count、min、q1、median、q3、max 和平均值。complete tokens、reasoning tokens、content tokens 额外计算过滤 0 后的非零箱线图。页面保留平均值展示，并用竖向箱线图补充展示全量数据分布，其中 q1/q3 分别作为 1/4 和 3/4 分位标记。
+核心指标中的 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时计算箱线图数据，包含 count、min、q1、median、q3、max 和平均值。complete tokens、reasoning tokens、content tokens 额外计算过滤 0 后的箱线图，并在页面中以“tokens推理成功数据”展示。页面保留平均值展示，并用竖向箱线图补充展示全量数据分布，其中 q1/q3 分别作为 1/4 和 3/4 分位标记。
 
 trace 侧统计 req_id 总数、最终成功数、最终链路失败数、最终失败且 content 为空数量、其他最终失败数量、retry req_id 数量、retry 最终成功数量和 parse error 数量。核心指标展示最终链路失败数量和推理成功题目数量（不含链路失败），不再单独展示最终失败 content 为空数量。
 
@@ -90,7 +90,7 @@ hash_id 重复评测聚合图按聚合 hash 升序排序，因此不同评测报
 页面包含：
 
 - 基础信息卡片：评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名、zip 文件名。
-- 核心指标卡片：平均 token、平均耗时、retry、最终链路失败、推理成功题目数量（不含链路失败）、empty、overlength、timeout；核心指标下方单独渲染完整数据箱线图，并为 complete tokens、reasoning tokens、content tokens 额外渲染过滤 0 后的非零箱线图，图中标注 min、1/4 分位、3/4 分位和 max。
+- 核心指标卡片：平均 token、平均耗时、retry、最终链路失败、推理成功题目数量（不含链路失败）、empty、overlength、timeout；核心指标下方单独渲染完整数据箱线图，并为 complete tokens、reasoning tokens、content tokens 额外在“tokens推理成功数据”中渲染过滤 0 后的箱线图，图中标注 min、1/4 分位、3/4 分位和 max。
 - 重试链路最终状态圆环图：基于重试链路表最终链路和 `export_data_list.json` 的 `eval_result` 统计，展示链路通过且做对、链路通过但做错、链路失败三类占比。
 - 异常摘要表：empty、overlength、timeout、duplicate、parse_error、export_exception。
 - 重试链路表：每个 req_id 一行，t1..tN 仅显示状态符号，不在主表展开 reasoning/content；表格使用紧凑行高和较小按钮；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看链路成功”按钮筛选最终链路成功的题，提供“只看链路失败”按钮筛选最终链路失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。

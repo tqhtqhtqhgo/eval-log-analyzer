@@ -105,7 +105,7 @@ def _render_core_boxplots(boxplots: dict[str, Any]) -> str:
         ("content tokens 非零", boxplots.get("content_token_nonzero")),
     ]
     all_charts = _boxplot_row("全部数据", all_items)
-    nonzero_charts = _boxplot_row("tokens 非零数据", nonzero_items)
+    nonzero_charts = _boxplot_row("tokens推理成功数据", nonzero_items)
     if not all_charts and not nonzero_charts:
         return ""
     return f"<h3>核心指标箱线图</h3>{all_charts}{nonzero_charts}"
