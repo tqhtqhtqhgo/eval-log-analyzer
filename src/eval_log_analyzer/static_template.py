@@ -127,7 +127,7 @@ pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; ov
 BASE_JS = """
 window.__evalLogAnalyzer = window.__evalLogAnalyzer || {};
 const modalState = { current: null, full: false };
-const retryFilterState = { failureOnly: false, evalFailedOnly: false, finalFailedOnly: false };
+const retryFilterState = { failureOnly: false, evalFailedOnly: false, finalSuccessOnly: false, finalFailedOnly: false };
 function elaData(id) { return window.__evalLogAnalyzer.attempts[id]; }
 function elaOpenAttempt(id) {
   const data = elaData(id);
@@ -177,6 +177,12 @@ function elaToggleEvalFailedFilter() {
   if (button) button.classList.toggle('active', retryFilterState.evalFailedOnly);
   elaFilterRetry();
 }
+function elaToggleFinalSuccessFilter() {
+  retryFilterState.finalSuccessOnly = !retryFilterState.finalSuccessOnly;
+  const button = document.getElementById('final-success-filter');
+  if (button) button.classList.toggle('active', retryFilterState.finalSuccessOnly);
+  elaFilterRetry();
+}
 function elaToggleFinalFailedFilter() {
   retryFilterState.finalFailedOnly = !retryFilterState.finalFailedOnly;
   const button = document.getElementById('final-failed-filter');
@@ -190,10 +196,12 @@ function elaFilterRetry() {
     const haystack = row.getAttribute('data-search') || '';
     const hasFailure = row.getAttribute('data-has-failure') === 'true';
     const evalFailed = row.getAttribute('data-eval-failed') === 'true';
+    const finalSuccess = row.getAttribute('data-final-success') === 'true';
     const finalFailed = row.getAttribute('data-final-failed') === 'true';
     row.style.display = haystack.includes(keyword)
       && (!retryFilterState.failureOnly || hasFailure)
       && (!retryFilterState.evalFailedOnly || evalFailed)
+      && (!retryFilterState.finalSuccessOnly || finalSuccess)
       && (!retryFilterState.finalFailedOnly || finalFailed) ? '' : 'none';
   }
 }

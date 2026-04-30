@@ -90,10 +90,13 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "retry-table" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
+    assert "只看链路成功" in html
     assert "只看链路失败" in html
     assert "评测结果" in html
     assert "data-eval-failed=\"true\"" in html
     assert "data-eval-failed=\"false\"" in html
+    assert "data-final-success=\"true\"" in html
+    assert "data-final-success=\"false\"" in html
     assert "data-final-failed=\"true\"" in html
     assert "data-final-failed=\"false\"" in html
     assert "做对" in html
@@ -124,6 +127,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "style=\"width:1%\"" in html
     assert "elaToggleFailureFilter" in html
     assert "elaToggleEvalFailedFilter" in html
+    assert "elaToggleFinalSuccessFilter" in html
     assert "elaToggleFinalFailedFilter" in html
     assert "hash_id 重复评测聚合紧凑分布图" in html
     assert "hash_id 重复评测聚合图" in html
