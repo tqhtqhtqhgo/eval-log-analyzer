@@ -49,6 +49,7 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert metrics.export_summary["retry_success_count"] == 1
     assert metrics.trace_summary["retry_req_id_count"] == 1
     assert metrics.trace_summary["retry_final_success_count"] == 1
+    assert metrics.trace_summary["final_success_count"] == 2
     assert metrics.trace_summary["final_failed_count"] == 1
     assert metrics.trace_summary["final_content_empty_count"] == 1
     assert metrics.trace_summary["final_other_failed_count"] == 0

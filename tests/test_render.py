@@ -100,8 +100,15 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "做错" in html
     assert "bar bad" in html
     assert "bar warn" in html
+    assert "最终链路失败数量" in html
+    assert "推理成功题目数量（不含链路失败）" in html
+    assert "最终失败 content 为空" not in html
     assert "boxplot" in html
     assert "核心指标箱线图" in html
+    assert "不含推理失败题目的 response 长度箱线图" in html
+    assert "做对题目 response 长度" in html
+    assert "做错题目 response 长度" in html
+    assert "总样本数 2" in html
     assert "全部数据" in html
     assert "tokens 非零数据" in html
     assert "complete tokens 非零" in html

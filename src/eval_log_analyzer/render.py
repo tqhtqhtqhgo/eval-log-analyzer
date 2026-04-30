@@ -76,8 +76,8 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("平均 total_used_time", export.get("avg_total_used_time")),
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
-        ("最终失败数量", trace.get("final_failed_count")),
-        ("最终失败 content 为空", trace.get("final_content_empty_count")),
+        ("最终链路失败数量", trace.get("final_failed_count")),
+        ("推理成功题目数量（不含链路失败）", trace.get("final_success_count")),
         ("empty 数量", export.get("empty_count")),
         ("overlength 数量", export.get("overlength_count")),
         ("timeout 数量", export.get("timeout_attempt_count")),
@@ -271,7 +271,41 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) ->
     return (
         "<section><h2>response 长度点阵图</h2>"
         f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\">{''.join(points)}</div>"
+        f"{_render_success_response_length_boxplots(traces, metrics)}"
         "</section>"
+    )
+
+
+def _render_success_response_length_boxplots(traces: list[ReqTrace], metrics: Metrics) -> str:
+    correct_lengths: list[int] = []
+    wrong_lengths: list[int] = []
+    for trace in traces:
+        # 只统计最终链路成功的题，避免推理失败样本影响做对/做错 response 长度分布。
+        if not trace.final_success:
+            continue
+        eval_result = metrics.eval_results.get(trace.req_id)
+        if eval_result is True:
+            correct_lengths.append(trace.final_response_length)
+        elif eval_result is False:
+            wrong_lengths.append(trace.final_response_length)
+
+    correct_boxplot = _response_length_boxplot(correct_lengths)
+    wrong_boxplot = _response_length_boxplot(wrong_lengths)
+    charts = "".join(
+        _boxplot_card(label, boxplot)
+        for label, boxplot in [
+            ("做对题目 response 长度", correct_boxplot),
+            ("做错题目 response 长度", wrong_boxplot),
+        ]
+        if boxplot
+    )
+    if not charts:
+        return ""
+    sample_count = len(correct_lengths) + len(wrong_lengths)
+    return (
+        "<div class=\"boxplot-row-title\">不含推理失败题目的 response 长度箱线图"
+        f"<span class=\"sample-count\">总样本数 {sample_count}</span></div>"
+        f"<div class=\"boxplot-grid response-boxplot-grid\">{charts}</div>"
     )
 
 
@@ -381,6 +415,31 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
         f"<span class=\"median\" style=\"bottom:{median_pos}%\"></span></div>"
         f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')} · max {boxplot.get('max')}</div>"
     )
+
+
+def _response_length_boxplot(values: list[int]) -> dict[str, float | int] | None:
+    numbers = sorted(float(value) for value in values)
+    if not numbers:
+        return None
+    return {
+        "count": len(numbers),
+        "min": round(numbers[0], 2),
+        "q1": round(_percentile(numbers, 0.25), 2),
+        "median": round(_percentile(numbers, 0.5), 2),
+        "q3": round(_percentile(numbers, 0.75), 2),
+        "max": round(numbers[-1], 2),
+        "avg": round(sum(numbers) / len(numbers), 2),
+    }
+
+
+def _percentile(numbers: list[float], ratio: float) -> float:
+    if len(numbers) == 1:
+        return numbers[0]
+    position = (len(numbers) - 1) * ratio
+    lower = int(position)
+    upper = min(lower + 1, len(numbers) - 1)
+    weight = position - lower
+    return numbers[lower] * (1 - weight) + numbers[upper] * weight
 
 
 def _box_percent(value: Any, maximum: float) -> int:
