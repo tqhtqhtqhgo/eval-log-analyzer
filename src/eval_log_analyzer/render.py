@@ -220,7 +220,7 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     points = []
     for display_id, trace in enumerate(traces, start=1):
-        left = _beeswarm_left(trace.final_response_length)
+        left = _beeswarm_left(trace.final_response_length, display_id)
         top = _beeswarm_top(trace, display_id)
         status = _status_class(trace, metrics.eval_results.get(trace.req_id))
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
@@ -427,12 +427,16 @@ def _fixed_width(length: int | float) -> int:
 def _beeswarm_top(trace: ReqTrace, display_id: int) -> int:
     hash_id = stable_trace_hash(trace)
     seed = int(hashlib.md5(hash_id.encode("utf-8")).hexdigest()[:8], 16) if hash_id else display_id
-    return 8 + ((seed + display_id) % 17) * 5
+    # 用更多纵向槽位降低同一长度，尤其是失败链路 length=0 点的重叠概率。
+    return 4 + ((seed + display_id * 7) % 31) * 3
 
 
-def _beeswarm_left(length: int) -> float:
+def _beeswarm_left(length: int, display_id: int) -> float:
     width = _fixed_width(length)
-    return round(1 + width * 0.98, 3)
+    if width <= 0:
+        # 失败链路通常长度为 0；放入左侧窄带，避免贴边裁剪并减少完全重叠。
+        return round(2.4 + ((display_id - 1) % 7) * 0.42, 3)
+    return round(2 + width * 0.97, 3)
 
 
 def _eval_text(value: bool | None) -> str:
