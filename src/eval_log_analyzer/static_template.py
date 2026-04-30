@@ -64,7 +64,8 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .boxplot .median { position: absolute; left: 18px; width: 42px; height: 2px; background: var(--bad); }
 .boxplot-meta { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .pie-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: var(--panel); }
-.pie-chart { width: 132px; height: 132px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 auto; }
+.pie-chart { position: relative; width: 132px; height: 132px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 auto; }
+.pie-chart::after { content: ""; position: absolute; inset: 34px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); }
 .pie-legend { display: grid; gap: 8px; min-width: 220px; }
 .pie-legend-item { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
 .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }

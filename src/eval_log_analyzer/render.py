@@ -32,7 +32,7 @@ def render_html(
             "<h1>评测日志分析报告</h1>",
             _render_basic_info(metrics.basic_info),
             _render_core_cards(metrics),
-            _render_retry_pie_chart(metrics),
+            _render_retry_pie_chart(display_traces, metrics),
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(display_traces, metrics, max_attempt_columns),
             _render_compact_response_length_chart(display_traces, metrics),
@@ -90,38 +90,49 @@ def _render_core_cards(metrics: Metrics) -> str:
     )
 
 
-def _render_retry_pie_chart(metrics: Metrics) -> str:
-    trace = metrics.trace_summary
-    total = int(trace.get("req_id_total") or 0)
-    success = int(trace.get("final_success_count") or 0)
-    content_empty = int(trace.get("final_content_empty_count") or 0)
-    other_failed = int(trace.get("final_other_failed_count") or 0)
+def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
+    pass_correct, pass_wrong, failed = _retry_pie_counts(traces, metrics)
+    total = pass_correct + pass_wrong + failed
     if total <= 0:
         return ""
-    success_deg = round(success / total * 360, 2)
-    empty_deg = round(content_empty / total * 360, 2)
+    pass_correct_deg = round(pass_correct / total * 360, 2)
+    pass_wrong_deg = round(pass_wrong / total * 360, 2)
     style = (
         "background:conic-gradient("
-        f"var(--ok) 0deg {success_deg}deg,"
-        f"var(--warn) {success_deg}deg {success_deg + empty_deg}deg,"
-        f"var(--bad) {success_deg + empty_deg}deg 360deg)"
+        f"var(--ok) 0deg {pass_correct_deg}deg,"
+        f"var(--warn) {pass_correct_deg}deg {pass_correct_deg + pass_wrong_deg}deg,"
+        f"var(--bad) {pass_correct_deg + pass_wrong_deg}deg 360deg)"
     )
     legend = [
-        ("ok", "最终链路成功", success),
-        ("warn", "最终失败 content 为空", content_empty),
-        ("bad", "其他最终失败", other_failed),
+        ("ok", "链路通过且做对", pass_correct),
+        ("warn", "链路通过但做错", pass_wrong),
+        ("bad", "链路失败", failed),
     ]
     legend_html = "".join(
         f"<div class=\"pie-legend-item\"><span class=\"legend-dot {klass}\"></span>{label}<b>{count}</b></div>"
         for klass, label, count in legend
     )
     return (
-        "<section><h2>重试链路最终状态饼图</h2>"
+        "<section><h2>重试链路最终状态圆环图</h2>"
         "<div class=\"pie-wrap\">"
-        f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 成功={success} content为空={content_empty} 其他失败={other_failed}\"></div>"
+        f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 通过且做对={pass_correct} 通过但做错={pass_wrong} 链路失败={failed}\"></div>"
         f"<div class=\"pie-legend\">{legend_html}</div>"
         "</div></section>"
     )
+
+
+def _retry_pie_counts(traces: list[ReqTrace], metrics: Metrics) -> tuple[int, int, int]:
+    pass_correct = 0
+    pass_wrong = 0
+    failed = 0
+    for trace in traces:
+        if not trace.final_success:
+            failed += 1
+        elif metrics.eval_results.get(trace.req_id) is True:
+            pass_correct += 1
+        else:
+            pass_wrong += 1
+    return pass_correct, pass_wrong, failed
 
 
 def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
