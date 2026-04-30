@@ -81,7 +81,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .compact-length-line.unknown { background: var(--muted); }
 .compact-row-scale { position: relative; min-height: 100%; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .compact-row-scale span { position: absolute; left: 0; transform: translateY(-50%); white-space: nowrap; }
-.beeswarm-chart { position: relative; height: 420px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; overflow: hidden; }
+.beeswarm-chart { position: relative; min-height: 384px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; overflow: hidden; }
 .beeswarm-point { position: absolute; width: 8px; height: 8px; padding: 0; border: 1px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 0 1px rgba(23, 32, 51, .16); }
 .beeswarm-point.ok { background: var(--ok); }
 .beeswarm-point.bad { background: var(--bad); }

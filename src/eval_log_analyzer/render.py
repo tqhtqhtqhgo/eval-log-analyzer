@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import html
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -219,9 +218,14 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
 
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     points = []
+    column_counts: dict[float, int] = {}
+    max_column_count = 0
     for display_id, trace in enumerate(traces, start=1):
-        left = _beeswarm_left(trace.final_response_length, display_id)
-        top = _beeswarm_top(trace, display_id)
+        left = _beeswarm_left(trace.final_response_length)
+        column_index = column_counts.get(left, 0)
+        column_counts[left] = column_index + 1
+        max_column_count = max(max_column_count, column_index + 1)
+        top = _beeswarm_top(column_index)
         status = _status_class(trace, metrics.eval_results.get(trace.req_id))
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
         title = (
@@ -229,12 +233,13 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) ->
             f"长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
         )
         points.append(
-            f"<button class=\"beeswarm-point {status}\" style=\"left:{left}%;top:{top}%\" "
+            f"<button class=\"beeswarm-point {status}\" style=\"left:{left}%;top:{top}px\" "
             f"title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\"></button>"
         )
+    chart_height = _beeswarm_chart_height(max_column_count)
     return (
         "<section><h2>response 长度点阵图</h2>"
-        f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\">{''.join(points)}</div>"
+        f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\" style=\"height:{chart_height}px\">{''.join(points)}</div>"
         f"{_render_success_response_length_boxplots(traces, metrics)}"
         "</section>"
     )
@@ -424,18 +429,21 @@ def _fixed_width(length: int | float) -> int:
     return max(1, min(100, round(value / 120000 * 100)))
 
 
-def _beeswarm_top(trace: ReqTrace, display_id: int) -> int:
-    hash_id = stable_trace_hash(trace)
-    seed = int(hashlib.md5(hash_id.encode("utf-8")).hexdigest()[:8], 16) if hash_id else display_id
-    # 用更多纵向槽位降低同一长度，尤其是失败链路 length=0 点的重叠概率。
-    return 4 + ((seed + display_id * 7) % 31) * 3
+def _beeswarm_top(column_index: int) -> int:
+    return 12 + column_index * 11
 
 
-def _beeswarm_left(length: int, display_id: int) -> float:
+def _beeswarm_chart_height(max_column_count: int) -> int:
+    if max_column_count <= 0:
+        return 384
+    return max(384, 24 + (max_column_count - 1) * 11)
+
+
+def _beeswarm_left(length: int) -> float:
     width = _fixed_width(length)
     if width <= 0:
-        # 失败链路通常长度为 0；放入左侧窄带，避免贴边裁剪并减少完全重叠。
-        return round(2.4 + ((display_id - 1) % 7) * 0.42, 3)
+        # 失败链路通常长度为 0；保持在同一列，同时避免贴边裁剪。
+        return 2.4
     return round(2 + width * 0.97, 3)
 
 
