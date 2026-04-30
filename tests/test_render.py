@@ -106,6 +106,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "elaToggleFinalFailedFilter" in html
     assert "hash_id 重复评测聚合紧凑分布图" in html
     assert "hash_id 重复评测聚合图" in html
+    assert "hash-repeat-row" in html
+    assert "hash-repeat-value" in html
     assert "elaOpenHash" in html
     assert "r1" in html
     assert "elaOpenAttempt" in html

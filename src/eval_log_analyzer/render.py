@@ -258,9 +258,9 @@ def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
         status = "ok" if group["correct_count"] > 0 else "bad"
         title = f"hash_id={group['hash_id']} 平均长度={group['avg_response_length']} 正确={group['correct_count']}/{group['total_count']}"
         rows.append(
-            f"<div class=\"length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenHash('{group['id']}')\">"
+            f"<div class=\"hash-repeat-row\" title=\"{_escape(title)}\" onclick=\"elaOpenHash('{group['id']}')\">"
             f"<div>{group['id']}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
-            f"<div class=\"length-value\">{_escape(group['avg_response_length'])} {group['correct_count']}/{group['total_count']}</div></div>"
+            f"<div class=\"hash-repeat-value\"><span>{_escape(group['avg_response_length'])}</span><span>{group['correct_count']}/{group['total_count']}</span></div></div>"
         )
         compact_lines.append(
             f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "

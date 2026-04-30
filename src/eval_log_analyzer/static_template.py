@@ -50,6 +50,9 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .bar.warn { background: var(--warn); }
 .bar.unknown { background: var(--muted); }
 .length-value { text-align: right; font-variant-numeric: tabular-nums; }
+.hash-repeat-row { display: grid; grid-template-columns: 42px minmax(120px, 1fr) 150px; gap: 8px; align-items: center; padding: 2px 0; border-bottom: 1px solid var(--line); cursor: pointer; min-height: 16px; font-size: 13px; }
+.hash-repeat-row .bar-track { height: 8px; border-radius: 4px; }
+.hash-repeat-value { display: flex; justify-content: flex-end; gap: 8px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
 .compact-length-chart { width: 100%; display: flex; flex-direction: column; gap: 1px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; overflow: hidden; }
 .compact-length-line { height: 3px; min-width: 1px; border-radius: 0 2px 2px 0; cursor: pointer; }
 .compact-length-line.ok { background: var(--ok); }
