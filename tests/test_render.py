@@ -75,8 +75,11 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "compact-row-scale" in html
     assert "compact-length-line" in html
     assert "response 长度点阵图" in html
+    assert "beeswarm-scroll" in html
+    assert "beeswarm-inner" in html
     assert "beeswarm-chart" in html
     assert "beeswarm-point" in html
+    assert "beeswarm-point warn" in html
     assert "hash=" in html
     assert "length-scale-row beeswarm" in html
     assert "response 长度分布图" in html

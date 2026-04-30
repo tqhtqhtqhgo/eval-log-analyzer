@@ -270,7 +270,9 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) ->
         )
     return (
         "<section><h2>response 长度点阵图</h2>"
-        f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\">{''.join(points)}</div></section>"
+        "<div class=\"beeswarm-scroll\"><div class=\"beeswarm-inner\">"
+        f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\">{''.join(points)}</div>"
+        "</div></div></section>"
     )
 
 
