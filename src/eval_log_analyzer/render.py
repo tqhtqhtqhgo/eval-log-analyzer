@@ -256,7 +256,7 @@ def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metri
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     points = []
     for display_id, trace in enumerate(traces, start=1):
-        left = _fixed_width(trace.final_response_length)
+        left = _beeswarm_left(trace.final_response_length)
         top = _beeswarm_top(trace, display_id)
         status = _status_class(trace, metrics.eval_results.get(trace.req_id))
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
@@ -419,6 +419,11 @@ def _beeswarm_top(trace: ReqTrace, display_id: int) -> int:
     hash_id = stable_trace_hash(trace)
     seed = int(hashlib.md5(hash_id.encode("utf-8")).hexdigest()[:8], 16) if hash_id else display_id
     return 8 + ((seed + display_id) % 17) * 5
+
+
+def _beeswarm_left(length: int) -> float:
+    width = _fixed_width(length)
+    return round(1 + width * 0.98, 3)
 
 
 def _eval_text(value: bool | None) -> str:
