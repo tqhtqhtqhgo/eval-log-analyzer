@@ -46,8 +46,6 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .result-pill.warn { color: var(--warn); }
 .result-pill.unknown { color: var(--muted); }
 .length-row { display: grid; grid-template-columns: 48px 1fr 96px; gap: 10px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); cursor: pointer; min-height: 20px; }
-.response-length-row { display: grid; grid-template-columns: 42px minmax(120px, 1fr) 96px; gap: 8px; align-items: center; padding: 2px 0; border-bottom: 1px solid var(--line); cursor: pointer; min-height: 16px; font-size: 13px; }
-.response-length-row .bar-track { height: 8px; border-radius: 4px; }
 .length-scale-row { display: grid; gap: 8px; align-items: end; margin: 0 0 4px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .length-scale-row.response { grid-template-columns: 42px minmax(120px, 1fr) 96px; }
 .length-scale-row.hash { grid-template-columns: 42px minmax(120px, 1fr) 150px; }

@@ -51,6 +51,7 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert metrics.trace_summary["retry_final_success_count"] == 1
     assert metrics.trace_summary["final_success_count"] == 2
     assert metrics.trace_summary["final_failed_count"] == 1
+    assert metrics.trace_summary["content_empty_count"] == 1
     assert metrics.trace_summary["final_content_empty_count"] == 1
     assert metrics.trace_summary["final_other_failed_count"] == 0
     assert metrics.export_summary["exception_categories"] == {
@@ -60,6 +61,8 @@ def test_calculate_export_and_trace_metrics() -> None:
     }
     assert all(row["type"] != "empty_result" for row in metrics.exception_summary)
     assert all(row["type"] != "overlength_result" for row in metrics.exception_summary)
+    assert any(row["type"] == "content_empty" and row["count"] == 1 for row in metrics.exception_summary)
+    assert all(row["type"] != "export_exception" for row in metrics.exception_summary)
     assert metrics.basic_info["model"] == "m"
 
 
@@ -76,7 +79,7 @@ def test_hash_repeat_groups() -> None:
     groups = build_hash_repeat_groups(parsed.traces, [{"req_id": "r1", "eval_result": "TRUE"}], 3)
 
     assert len(groups) == 1
-    assert groups[0]["hash_id"] == "83878c91171338902e0fe0fb97a8c47a"
+    assert groups[0]["hash_id"] == "148de9c5a7a44d19e56cd9ae1a554bf6"
     assert groups[0]["req_ids"] == ["r1", "r2"]
     assert groups[0]["avg_response_length"] == 15
     assert groups[0]["correct_count"] == 1
@@ -95,4 +98,4 @@ def test_hash_repeat_groups_are_sorted_by_stable_hash() -> None:
 
     groups = build_hash_repeat_groups(parsed.traces, [])
 
-    assert [group["req_ids"] for group in groups] == [["r_a"], ["r_b"]]
+    assert [group["req_ids"] for group in groups] == [["r_b"], ["r_a"]]

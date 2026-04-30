@@ -78,9 +78,9 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "left:1.98%" in html
     assert "hash=" in html
     assert "length-scale-row beeswarm" in html
-    assert "response 长度分布图" in html
-    assert "response-length-row" in html
-    assert "length-scale-row response" in html
+    assert "response 长度分布图" not in html
+    assert "response-length-row" not in html
+    assert "length-scale-row response" not in html
     assert "length-scale-row hash" not in html
     assert "10k" in html
     assert "120k" in html
@@ -100,8 +100,6 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "data-final-failed=\"false\"" in html
     assert "做对" in html
     assert "做错" in html
-    assert "bar bad" in html
-    assert "bar warn" in html
     assert "最终链路失败数量" in html
     assert "推理成功题目数量（不含链路失败）" in html
     assert "最终失败 content 为空" not in html
@@ -118,13 +116,13 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "content tokens 非零" in html
     assert "boxplot-card" in html
     assert "scale 120k" in html
+    assert "scale 64k" in html
     assert "平均 total_used_time" in html
     assert "min" in html
     assert "max" in html
     assert "p25" in html
     assert "p75" in html
     assert "style=\"bottom:" in html
-    assert "style=\"width:1%\"" in html
     assert "elaToggleFailureFilter" in html
     assert "elaToggleEvalFailedFilter" in html
     assert "elaToggleFinalSuccessFilter" in html
@@ -133,7 +131,10 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "hash_id 重复评测聚合图" not in html
     assert "hash-repeat-row" not in html
     assert "hash-repeat-value" not in html
-    assert html.rfind("重试链路表") > html.rfind("response 长度分布图")
+    assert html.rfind("重试链路表") > html.rfind("response 长度点阵图")
+    assert "export_exception" not in html
+    assert "content_empty" in html
+    assert "f64551fcd6f07823cb87971cfb914464" in html
     assert "r1" in html
     assert "elaOpenAttempt" in html
     assert "json-modal" in html

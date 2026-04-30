@@ -67,9 +67,9 @@ attempt 成功必须同时满足：
 
 ## 指标统计规则
 
-export 侧统计总条数、通过数、通过率、`eval_result` 分布、平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry 条数、retry 成功条数、exception 条数和 exception 类型分布。异常摘要从 export 行的 `exception` / `exception_list` 文本统计：`Content OutOfMaxLength` 统计 exception 以该字符串开头的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数。基础信息中的通过题数、通过率，以及页面中“做对/做错”的判断都以 `export_data_list.json` 每个对象的 `eval_result` 为准，支持字符串 `"True"` / `"False"` 以及同义大小写写法。
+export 侧统计总条数、通过数、通过率、`eval_result` 分布、平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry 条数、retry 成功条数、exception 条数和 exception 类型分布。异常摘要从 export 行的 `exception` / `exception_list` 文本统计：`Content OutOfMaxLength` 统计 exception 以该字符串开头的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数；`content_empty` 统计 response 中 `respMsg.content` 为空的条数。基础信息中的通过题数、通过率，以及页面中“做对/做错”的判断都以 `export_data_list.json` 每个对象的 `eval_result` 为准，支持字符串 `"True"` / `"False"` 以及同义大小写写法。
 
-核心指标中的 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时计算箱线图数据，包含 count、min、q1、median、q3、max 和平均值。complete tokens、reasoning tokens、content tokens 额外计算过滤 0 后的箱线图，并在页面中以“tokens推理成功数据”展示。页面保留平均值展示，并用竖向箱线图补充展示全量数据分布，其中 q1/q3 分别作为 1/4 和 3/4 分位标记。所有箱线图统一使用 0 到 120k 作为纵向绘制标尺，避免不同图按自身最大值缩放导致视觉高度不可比较。
+核心指标中的 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时计算箱线图数据，包含 count、min、q1、median、q3、max 和平均值。complete tokens、reasoning tokens、content tokens 额外计算过滤 0 后的箱线图，并在页面中以“tokens推理成功数据”展示。页面保留平均值展示，并用竖向箱线图补充展示全量数据分布，其中 q1/q3 分别作为 1/4 和 3/4 分位标记。complete/reasoning token 箱线图使用 0 到 120k 标尺，content tokens 和 content tokens 非零使用 0 到 64k 标尺，used_time 和 total_used_time 不设置固定 scale，按自身数据范围绘制。
 
 trace 侧统计 req_id 总数、最终成功数、最终链路失败数、最终失败且 content 为空数量、其他最终失败数量、retry req_id 数量、retry 最终成功数量和 parse error 数量。核心指标展示最终链路失败数量和推理成功题目数量（不含链路失败），不再单独展示最终失败 content 为空数量。
 
@@ -77,7 +77,7 @@ empty、overlength、timeout 文件当前仅保持读取兼容，不再进入核
 
 ## hash_id 聚合规则
 
-重复评测聚合不直接信任 request 中的 `hash_id`。真实日志中可能出现同一 user message 但 hash_id 不同的情况，因此当前实现对解析出的 prompt 做空白规范化后计算 md5，作为聚合用的稳定 hash_id。prompt 为空时才退回使用日志中的 `hash_id`，仍为空则退回 `req_id`。
+重复评测聚合不直接信任 request 中的 `hash_id`。真实日志中可能出现同一 user message 但 hash_id 不同的情况，因此当前实现对解析出的 prompt 做空白规范化后计算 sha256，并取前 32 位作为聚合用的稳定 hash_id。prompt 为空时对 `req_id` 计算 sha256 前 32 位作为兜底。
 
 每组 response 长度取组内所有 req_id 最终 response_length 的平均值。正确次数从 `export_data_list.json` 中相同 req_id 的 `eval_result` 计算。总次数优先使用 `repeat_group_size`，为空时使用该聚合 hash 下 req_id 数量。
 
@@ -90,12 +90,11 @@ empty、overlength、timeout 文件当前仅保持读取兼容，不再进入核
 页面包含：
 
 - 基础信息卡片：评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名、zip 文件名。
-- 核心指标卡片：平均 token、平均耗时、retry、最终链路失败、推理成功题目数量（不含链路失败）；核心指标下方单独渲染完整数据箱线图，并为 complete tokens、reasoning tokens、content tokens 额外在“tokens推理成功数据”中渲染过滤 0 后的箱线图，图中标注 min、1/4 分位、3/4 分位和 max，所有箱线图按 0 到 120k 固定标尺绘制。
+- 核心指标卡片：平均 token、平均耗时、retry、最终链路失败、推理成功题目数量（不含链路失败）；核心指标下方单独渲染完整数据箱线图，并为 complete tokens、reasoning tokens、content tokens 额外在“tokens推理成功数据”中渲染过滤 0 后的箱线图，图中标注 min、1/4 分位、3/4 分位和 max。content tokens 和 content tokens 非零按 0 到 64k 固定标尺绘制，used_time 和 total_used_time 不设置固定 scale。
 - 重试链路最终状态圆环图：基于重试链路表最终链路和 `export_data_list.json` 的 `eval_result` 统计，展示链路通过且做对、链路通过但做错、链路失败三类占比。
-- 异常摘要表：Content OutOfMaxLength、timeout、HTTP Connection 异常、duplicate、parse_error、export_exception。
-- 重试链路表：页面底部展示，每个 req_id 一行，按本条数据的 `hash_id` 排序，并增加 `hash_id` 列；t1..tN 仅显示状态符号，不在主表展开 reasoning/content；表格使用紧凑行高和较小按钮；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看链路成功”按钮筛选最终链路成功的题，提供“只看链路失败”按钮筛选最终链路失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
+- 异常摘要表：Content OutOfMaxLength、timeout、HTTP Connection 异常、content_empty、duplicate、parse_error。
+- 重试链路表：页面底部展示，每个 req_id 一行，按 user content 计算出的 sha256 前 32 位排序，并增加 `hash_id` 列；t1..tN 仅显示状态符号，不在主表展开 reasoning/content；表格使用紧凑行高和较小按钮；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看链路成功”按钮筛选最终链路成功的题，提供“只看链路失败”按钮筛选最终链路失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
 - response 长度点阵图：每个 req_id 对应一个点，x 轴按 120k 固定满刻度展示 response 长度，y 轴按稳定 hash 做轻微错位以减少重叠，图高为原始点阵图高度的 3 倍；链路失败且 `eval_result=False` 的点使用橙色；hover 显示 id、req_id、hash、长度和评测结果。点阵图下方排除最终链路失败样本，并按 `eval_result` 分别渲染做对题目和做错题目的 response 长度箱线图，展示 min、p25、p75、max 和总样本数。
-- response 长度分布图：与重试链路表使用相同 `hash_id` 排序和序号，并使用紧凑字体和行高；顶部显示 0 到 120k 的长度标尺，每 10k 一个刻度。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错。
 - JSON 弹窗：点击 attempt、最终结果或图表行时展示 request/response，超过 50KB 默认截断，可显示完整 JSON 和复制。
 
 response 长度图使用固定 120k token 作为满刻度，不再按当前报告最大值归一化。超过 120k 的长度按满刻度绘制。

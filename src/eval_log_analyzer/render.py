@@ -35,7 +35,6 @@ def render_html(
             _render_retry_pie_chart(display_traces, metrics),
             _render_exception_summary(metrics.exception_summary),
             _render_response_beeswarm_chart(display_traces, metrics),
-            _render_response_length_chart(display_traces, metrics),
             _render_retry_table(display_traces, metrics, max_attempt_columns),
             "</main>",
             _render_modal(),
@@ -218,21 +217,6 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
     )
 
 
-def _render_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
-    rows = []
-    for display_id, trace in enumerate(traces, start=1):
-        width = _fixed_width(trace.final_response_length)
-        status = _status_class(trace, metrics.eval_results.get(trace.req_id))
-        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
-        title = f"req_id={trace.req_id} prompt={trace.prompt} 长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
-        rows.append(
-            f"<div class=\"response-length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\">"
-            f"<div>{display_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
-            f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
-        )
-    return f"<section><h2>response 长度分布图</h2>{_render_length_scale('response')}{''.join(rows)}</section>"
-
-
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
     points = []
     for display_id, trace in enumerate(traces, start=1):
@@ -327,15 +311,15 @@ def _card(label: str, value: Any) -> str:
 
 
 def _boxplot_card(label: str, boxplot: dict[str, Any]) -> str:
-    chart = _boxplot_html(boxplot)
+    chart = _boxplot_html(label, boxplot)
     return (
         f"<div class=\"boxplot-card\"><div class=\"label\">{_escape(label)}</div>"
         f"{chart}</div>"
     )
 
 
-def _boxplot_html(boxplot: dict[str, Any]) -> str:
-    maximum = 120000.0
+def _boxplot_html(label: str, boxplot: dict[str, Any]) -> str:
+    maximum, scale_text = _boxplot_scale(label, boxplot)
     min_pos = _box_percent(boxplot.get("min"), maximum)
     q1_pos = _box_percent(boxplot.get("q1"), maximum)
     median_pos = _box_percent(boxplot.get("median"), maximum)
@@ -347,8 +331,16 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
     whisker_height = max(1, abs(max_pos - min_pos))
     title = (
         f"count={boxplot.get('count')} min={boxplot.get('min')} q1={boxplot.get('q1')} "
-        f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')} scale=0-120000"
+        f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')}"
     )
+    if scale_text:
+        title += f" scale=0-{scale_text}"
+    meta = (
+        f"min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} "
+        f"· p75 {boxplot.get('q3')} · max {boxplot.get('max')}"
+    )
+    if scale_text:
+        meta += f" · scale {scale_text}"
     return (
         f"<div class=\"boxplot\" title=\"{_escape(title)}\">"
         f"<span class=\"whisker\" style=\"bottom:{whisker_bottom}%;height:{whisker_height}%\"></span>"
@@ -358,8 +350,17 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
         f"<span class=\"quartile q1\" style=\"bottom:{q1_pos}%\"></span>"
         f"<span class=\"quartile q3\" style=\"bottom:{q3_pos}%\"></span>"
         f"<span class=\"median\" style=\"bottom:{median_pos}%\"></span></div>"
-        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')} · max {boxplot.get('max')} · scale 120k</div>"
+        f"<div class=\"boxplot-meta\">{meta}</div>"
     )
+
+
+def _boxplot_scale(label: str, boxplot: dict[str, Any]) -> tuple[float, str]:
+    if label in {"content tokens", "content tokens 非零"}:
+        return 64000.0, "64k"
+    if label in {"used_time", "total_used_time"}:
+        maximum = float(boxplot.get("max") or 0)
+        return (maximum if maximum > 0 else 1.0), ""
+    return 120000.0, "120k"
 
 
 def _response_length_boxplot(values: list[int]) -> dict[str, float | int] | None:
@@ -410,7 +411,7 @@ def _sorted_traces(traces: list[ReqTrace]) -> list[ReqTrace]:
 
 
 def _trace_hash_id(trace: ReqTrace) -> str:
-    return trace.hash_id or stable_trace_hash(trace)
+    return stable_trace_hash(trace)
 
 
 def _fixed_width(length: int | float) -> int:

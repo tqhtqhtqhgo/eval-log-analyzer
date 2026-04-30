@@ -100,10 +100,8 @@ def stable_trace_hash(trace: ReqTrace) -> str:
     """返回由 user prompt 计算出的稳定排序和聚合 hash。"""
     prompt = _normalize_prompt(trace.prompt)
     if prompt:
-        return hashlib.md5(prompt.encode("utf-8")).hexdigest()
-    if trace.hash_id:
-        return trace.hash_id
-    return f"req_id:{trace.req_id}"
+        return hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:32]
+    return hashlib.sha256(trace.req_id.encode("utf-8")).hexdigest()[:32]
 
 
 def _normalize_prompt(prompt: str | None) -> str:
@@ -156,12 +154,14 @@ def _eval_results(rows: list[dict[str, Any]]) -> dict[str, bool | None]:
 def _trace_summary(traces: list[ReqTrace], parse_error_count: int) -> dict[str, Any]:
     retry_traces = [trace for trace in traces if len(trace.attempts) > 1]
     final_content_empty_count = sum(1 for trace in traces if _is_final_content_empty(trace))
+    content_empty_count = sum(1 for trace in traces for attempt in trace.attempts if _is_response_content_empty(attempt.response_json))
     final_success_count = sum(1 for trace in traces if trace.final_success)
     final_failed_count = sum(1 for trace in traces if not trace.final_success)
     return {
         "req_id_total": len(traces),
         "final_success_count": final_success_count,
         "final_failed_count": final_failed_count,
+        "content_empty_count": content_empty_count,
         "final_content_empty_count": final_content_empty_count,
         "final_other_failed_count": max(0, final_failed_count - final_content_empty_count),
         "retry_req_id_count": len(retry_traces),
@@ -176,6 +176,15 @@ def _is_final_content_empty(trace: ReqTrace) -> bool:
         and trace.final_attempt
         and trace.final_attempt.failure_reason == "content_empty"
     )
+
+
+def _is_response_content_empty(response: dict[str, Any] | None) -> bool:
+    if not response:
+        return False
+    resp_msg = response.get("respMsg")
+    if not isinstance(resp_msg, dict):
+        return False
+    return str(resp_msg.get("content") or "").strip() == ""
 
 
 def _optional_file_summary(duplicate_result: Any | None) -> dict[str, Any]:
@@ -229,6 +238,11 @@ def _exception_summary(
             "description": "exception 包含 HTTPConnection",
         },
         {
+            "type": "content_empty",
+            "count": trace_summary["content_empty_count"],
+            "description": "response.respMsg.content 为空",
+        },
+        {
             "type": "duplicate_result",
             "count": optional_summary["duplicate_count"],
             "description": "duplicate_result.json 已存在，当前版本暂不做 COT 循环深度分析"
@@ -236,7 +250,6 @@ def _exception_summary(
             else "未发现 duplicate_result.json",
         },
         {"type": "parse_error", "count": trace_summary["parse_error_count"], "description": "log 中存在无法解析的 JSON"},
-        {"type": "export_exception", "count": export_summary["exception_count"], "description": "export_data_list 异常字段"},
     ]
 
 
