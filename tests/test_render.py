@@ -51,17 +51,24 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "length-row" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
+    assert "只看链路失败" in html
     assert "评测结果" in html
     assert "data-eval-failed=\"false\"" in html
+    assert "data-final-failed=\"false\"" in html
     assert "做对" in html
     assert "boxplot" in html
+    assert "核心指标箱线图" in html
+    assert "boxplot-card" in html
     assert "平均 total_used_time" in html
+    assert "min" in html
+    assert "max" in html
     assert "p25" in html
     assert "p75" in html
     assert "style=\"bottom:" in html
     assert "style=\"width:1%\"" in html
     assert "elaToggleFailureFilter" in html
     assert "elaToggleEvalFailedFilter" in html
+    assert "elaToggleFinalFailedFilter" in html
     assert "hash_id 重复评测聚合紧凑分布图" in html
     assert "hash_id 重复评测聚合图" in html
     assert "elaOpenHash" in html

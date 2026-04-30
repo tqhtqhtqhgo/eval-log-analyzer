@@ -90,10 +90,10 @@ hash_id 重复评测聚合图按聚合 hash 升序排序，因此不同评测报
 页面包含：
 
 - 基础信息卡片：评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名、zip 文件名。
-- 核心指标卡片：平均 token、平均耗时、retry、最终失败、最终失败 content 为空、empty、overlength、timeout；complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时显示竖向箱线图。
+- 核心指标卡片：平均 token、平均耗时、retry、最终失败、最终失败 content 为空、empty、overlength、timeout；核心指标下方单独渲染 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 的竖向箱线图，并标注 min、1/4 分位、3/4 分位和 max。
 - 重试链路最终状态圆环图：基于重试链路表最终链路和评测结果统计，展示链路通过且做对、链路通过但做错、链路失败三类占比。
 - 异常摘要表：empty、overlength、timeout、duplicate、parse_error、export_exception。
-- 重试链路表：每个 req_id 一行，t1..tN 仅显示状态符号，不在主表展开 reasoning/content；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
+- 重试链路表：每个 req_id 一行，t1..tN 仅显示状态符号，不在主表展开 reasoning/content；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看链路失败”按钮筛选最终链路失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
 - response 长度紧凑分布图：按 user prompt 稳定 hash 排序，每个 req_id 对应一条紧凑横线，不直接标注长度，hover 显示 id、req_id、长度和评测结果。
 - response 长度分布图：与重试链路表使用相同稳定排序和序号。绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错。
 - hash_id 重复评测聚合紧凑分布图和聚合图：仅在 `enable_hash_repeat_chart=True` 时显示，按聚合 hash 升序排序。

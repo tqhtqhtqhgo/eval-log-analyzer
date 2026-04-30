@@ -20,6 +20,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sa
 main { max-width: 1240px; margin: 0 auto; padding: 24px; }
 h1 { margin: 0 0 18px; font-size: 28px; }
 h2 { margin: 28px 0 12px; font-size: 20px; }
+h3 { margin: 20px 0 10px; font-size: 16px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); min-height: 76px; }
 .label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
@@ -52,7 +53,8 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .compact-length-line.ok { background: var(--ok); }
 .compact-length-line.bad { background: var(--bad); }
 .compact-length-line.warn { background: var(--warn); }
-.metric-card { min-height: 178px; }
+.boxplot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.boxplot-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); min-height: 178px; }
 .boxplot { position: relative; width: 78px; height: 84px; margin: 12px auto 0; border-left: 1px solid #dce3ee; border-bottom: 1px solid #dce3ee; }
 .boxplot .whisker { position: absolute; left: 38px; width: 2px; background: #475467; }
 .boxplot .cap { position: absolute; left: 29px; width: 20px; height: 2px; background: #475467; }
@@ -84,7 +86,7 @@ pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; ov
 BASE_JS = """
 window.__evalLogAnalyzer = window.__evalLogAnalyzer || {};
 const modalState = { current: null, full: false };
-const retryFilterState = { failureOnly: false, evalFailedOnly: false };
+const retryFilterState = { failureOnly: false, evalFailedOnly: false, finalFailedOnly: false };
 function elaData(id) { return window.__evalLogAnalyzer.attempts[id]; }
 function elaOpenAttempt(id) {
   const data = elaData(id);
@@ -134,6 +136,12 @@ function elaToggleEvalFailedFilter() {
   if (button) button.classList.toggle('active', retryFilterState.evalFailedOnly);
   elaFilterRetry();
 }
+function elaToggleFinalFailedFilter() {
+  retryFilterState.finalFailedOnly = !retryFilterState.finalFailedOnly;
+  const button = document.getElementById('final-failed-filter');
+  if (button) button.classList.toggle('active', retryFilterState.finalFailedOnly);
+  elaFilterRetry();
+}
 function elaFilterRetry() {
   const input = document.getElementById('retry-search');
   const keyword = (input ? input.value : '').trim().toLowerCase();
@@ -141,9 +149,11 @@ function elaFilterRetry() {
     const haystack = row.getAttribute('data-search') || '';
     const hasFailure = row.getAttribute('data-has-failure') === 'true';
     const evalFailed = row.getAttribute('data-eval-failed') === 'true';
+    const finalFailed = row.getAttribute('data-final-failed') === 'true';
     row.style.display = haystack.includes(keyword)
       && (!retryFilterState.failureOnly || hasFailure)
-      && (!retryFilterState.evalFailedOnly || evalFailed) ? '' : 'none';
+      && (!retryFilterState.evalFailedOnly || evalFailed)
+      && (!retryFilterState.finalFailedOnly || finalFailed) ? '' : 'none';
   }
 }
 """

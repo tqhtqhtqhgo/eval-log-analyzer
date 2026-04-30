@@ -66,14 +66,12 @@ def _render_core_cards(metrics: Metrics) -> str:
     export = metrics.export_summary
     trace = metrics.trace_summary
     boxplots = export.get("boxplots") or {}
-    metric_cards = [
-        ("平均 complete tokens", export.get("avg_complete_tokens"), boxplots.get("complete_tokens")),
-        ("平均 reasoning tokens", export.get("avg_reasoning_token"), boxplots.get("reasoning_token")),
-        ("平均 content tokens", export.get("avg_content_token"), boxplots.get("content_token")),
-        ("平均 used_time", export.get("avg_used_time"), boxplots.get("used_time")),
-        ("平均 total_used_time", export.get("avg_total_used_time"), boxplots.get("total_used_time")),
-    ]
     items = [
+        ("平均 complete tokens", export.get("avg_complete_tokens")),
+        ("平均 reasoning tokens", export.get("avg_reasoning_token")),
+        ("平均 content tokens", export.get("avg_content_token")),
+        ("平均 used_time", export.get("avg_used_time")),
+        ("平均 total_used_time", export.get("avg_total_used_time")),
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
         ("最终失败数量", trace.get("final_failed_count")),
@@ -84,10 +82,25 @@ def _render_core_cards(metrics: Metrics) -> str:
     ]
     return (
         "<section><h2>核心指标</h2><div class=\"grid\">"
-        + "".join(_metric_card(k, v, boxplot) for k, v, boxplot in metric_cards)
         + "".join(_card(k, v) for k, v in items)
-        + "</div></section>"
+        + "</div>"
+        + _render_core_boxplots(boxplots)
+        + "</section>"
     )
+
+
+def _render_core_boxplots(boxplots: dict[str, Any]) -> str:
+    items = [
+        ("complete tokens", boxplots.get("complete_tokens")),
+        ("reasoning tokens", boxplots.get("reasoning_token")),
+        ("content tokens", boxplots.get("content_token")),
+        ("used_time", boxplots.get("used_time")),
+        ("total_used_time", boxplots.get("total_used_time")),
+    ]
+    charts = "".join(_boxplot_card(label, boxplot) for label, boxplot in items if boxplot)
+    if not charts:
+        return ""
+    return f"<h3>核心指标箱线图</h3><div class=\"boxplot-grid\">{charts}</div>"
 
 
 def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
@@ -170,10 +183,12 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         eval_class = _status_class(trace, eval_result)
         has_failure = any(not attempt.success for attempt in trace.attempts)
         eval_failed = eval_result is False
+        final_failed = not trace.final_success
         search_text = " ".join([trace.req_id, trace.prompt] + [a.failure_reason for a in trace.attempts]).lower()
         rows.append(
             f"<tr data-retry-row data-has-failure=\"{str(has_failure).lower()}\" "
-            f"data-eval-failed=\"{str(eval_failed).lower()}\" data-search=\"{_escape(search_text)}\">"
+            f"data-eval-failed=\"{str(eval_failed).lower()}\" data-final-failed=\"{str(final_failed).lower()}\" "
+            f"data-search=\"{_escape(search_text)}\">"
             f"<td>{display_id}</td><td>{_escape(trace.req_id)}</td>"
             + "".join(attempt_cells)
             + f"<td><button class=\"{final_class}\" onclick=\"elaOpenAttempt('{final_id}')\">{final_symbol}</button></td>"
@@ -183,7 +198,8 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         "<section><h2>重试链路表</h2>"
         "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
         "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
-        "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button></div>"
+        "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button>"
+        "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看链路失败</button></div>"
         f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
@@ -271,13 +287,11 @@ def _card(label: str, value: Any) -> str:
     return f"<div class=\"card\"><div class=\"label\">{_escape(label)}</div><div class=\"value\">{_escape(display)}</div></div>"
 
 
-def _metric_card(label: str, value: Any, boxplot: dict[str, Any] | None) -> str:
-    if not boxplot:
-        return _card(label, value)
+def _boxplot_card(label: str, boxplot: dict[str, Any]) -> str:
     chart = _boxplot_html(boxplot)
     return (
-        f"<div class=\"card metric-card\"><div class=\"label\">{_escape(label)}</div>"
-        f"<div class=\"value\">{_escape(value)}</div>{chart}</div>"
+        f"<div class=\"boxplot-card\"><div class=\"label\">{_escape(label)}</div>"
+        f"{chart}</div>"
     )
 
 
@@ -307,7 +321,7 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
         f"<span class=\"quartile q1\" style=\"bottom:{q1_pos}%\"></span>"
         f"<span class=\"quartile q3\" style=\"bottom:{q3_pos}%\"></span>"
         f"<span class=\"median\" style=\"bottom:{median_pos}%\"></span></div>"
-        f"<div class=\"boxplot-meta\">p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')}</div>"
+        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')} · max {boxplot.get('max')}</div>"
     )
 
 
