@@ -51,6 +51,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .length-scale-row { display: grid; gap: 8px; align-items: end; margin: 0 0 4px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .length-scale-row.response { grid-template-columns: 42px minmax(120px, 1fr) 96px; }
 .length-scale-row.hash { grid-template-columns: 42px minmax(120px, 1fr) 150px; }
+.length-scale-row.beeswarm { grid-template-columns: 0 minmax(120px, 1fr) 0; }
 .length-scale-track { position: relative; height: 18px; border-bottom: 1px solid var(--line); }
 .length-scale-track span { position: absolute; bottom: 2px; transform: translateX(-50%); white-space: nowrap; }
 .length-scale-track span:nth-child(1) { left: 0%; transform: none; }
@@ -85,6 +86,12 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .compact-length-line.unknown { background: var(--muted); }
 .compact-row-scale { position: relative; min-height: 100%; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .compact-row-scale span { position: absolute; left: 0; transform: translateY(-50%); white-space: nowrap; }
+.beeswarm-chart { position: relative; height: 128px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfe; overflow: hidden; }
+.beeswarm-point { position: absolute; width: 7px; height: 7px; padding: 0; border: 1px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 0 1px rgba(23, 32, 51, .16); }
+.beeswarm-point.ok { background: var(--ok); }
+.beeswarm-point.bad { background: var(--bad); }
+.beeswarm-point.warn { background: var(--warn); }
+.beeswarm-point.unknown { background: var(--muted); }
 .boxplot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .boxplot-row-title { color: var(--muted); font-size: 13px; font-weight: 650; margin: 12px 0 8px; }
 .boxplot-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); min-height: 178px; }

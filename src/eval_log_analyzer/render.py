@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,7 @@ def render_html(
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(display_traces, metrics, max_attempt_columns),
             _render_compact_response_length_chart(display_traces, metrics),
+            _render_response_beeswarm_chart(display_traces, metrics),
             _render_response_length_chart(display_traces, metrics),
             _render_hash_repeat_chart(metrics, enable_hash_repeat_chart),
             "</main>",
@@ -251,6 +253,27 @@ def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metri
     )
 
 
+def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
+    points = []
+    for display_id, trace in enumerate(traces, start=1):
+        left = _fixed_width(trace.final_response_length)
+        top = _beeswarm_top(trace, display_id)
+        status = _status_class(trace, metrics.eval_results.get(trace.req_id))
+        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        title = (
+            f"id={display_id} req_id={trace.req_id} hash={stable_trace_hash(trace)} "
+            f"长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
+        )
+        points.append(
+            f"<button class=\"beeswarm-point {status}\" style=\"left:{left}%;top:{top}%\" "
+            f"title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\"></button>"
+        )
+    return (
+        "<section><h2>response 长度点阵图</h2>"
+        f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\">{''.join(points)}</div></section>"
+    )
+
+
 def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
     if not enabled:
         return ""
@@ -389,6 +412,12 @@ def _fixed_width(length: int | float) -> int:
     if value <= 0:
         return 0
     return max(1, min(100, round(value / 120000 * 100)))
+
+
+def _beeswarm_top(trace: ReqTrace, display_id: int) -> int:
+    hash_id = stable_trace_hash(trace)
+    seed = int(hashlib.md5(hash_id.encode("utf-8")).hexdigest()[:8], 16) if hash_id else display_id
+    return 8 + ((seed + display_id) % 17) * 5
 
 
 def _eval_text(value: bool | None) -> str:
