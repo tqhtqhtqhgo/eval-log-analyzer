@@ -230,7 +230,7 @@ def _render_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> s
             f"<div>{display_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
             f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
         )
-    return f"<section><h2>response 长度分布图</h2>{''.join(rows)}</section>"
+    return f"<section><h2>response 长度分布图</h2>{_render_length_scale('response')}{''.join(rows)}</section>"
 
 
 def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
@@ -244,7 +244,11 @@ def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metri
             f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
             f"style=\"width:{width}%\" onclick=\"elaOpenAttempt('{final_id}')\"></div>"
         )
-    return f"<section><h2>response 长度紧凑分布图</h2><div class=\"compact-length-chart\">{''.join(lines)}</div></section>"
+    return (
+        "<section><h2>response 长度紧凑分布图</h2>"
+        f"<div class=\"compact-chart-with-scale\"><div class=\"compact-length-chart\">{''.join(lines)}</div>{_render_compact_row_scale(len(traces))}</div>"
+        "</section>"
+    )
 
 
 def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
@@ -267,9 +271,25 @@ def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
             f"style=\"width:{width}%\" onclick=\"elaOpenHash('{group['id']}')\"></div>"
         )
     return (
-        f"<section><h2>hash_id 重复评测聚合紧凑分布图</h2><div class=\"compact-length-chart\">{''.join(compact_lines)}</div></section>"
-        f"<section><h2>hash_id 重复评测聚合图</h2>{''.join(rows)}</section>"
+        f"<section><h2>hash_id 重复评测聚合紧凑分布图</h2><div class=\"compact-chart-with-scale\"><div class=\"compact-length-chart\">{''.join(compact_lines)}</div>{_render_compact_row_scale(len(groups))}</div></section>"
+        f"<section><h2>hash_id 重复评测聚合图</h2>{_render_length_scale('hash')}{''.join(rows)}</section>"
     )
+
+
+def _render_length_scale(kind: str) -> str:
+    labels = "".join(f"<span>{value}k</span>" for value in range(0, 121, 10))
+    return (
+        f"<div class=\"length-scale-row {kind}\"><div></div>"
+        f"<div class=\"length-scale-track\">{labels}</div><div></div></div>"
+    )
+
+
+def _render_compact_row_scale(count: int) -> str:
+    ticks = []
+    for value in range(100, count + 1, 100):
+        top = min(100, round((value - 0.5) / max(count, 1) * 100, 3))
+        ticks.append(f"<span style=\"top:{top}%\">{value}</span>")
+    return f"<div class=\"compact-row-scale\">{''.join(ticks)}</div>"
 
 
 def _render_modal() -> str:

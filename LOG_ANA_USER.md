@@ -72,11 +72,11 @@ print(html_path)
 
 重试链路表、response 长度紧凑分布图和 response 长度分布图都按 user content/prompt 的稳定 hash 排序，因此多次评测中同一题的位置会尽量保持一致。
 
-response 长度分布图按 req_id 展示最终 attempt 的 response 长度，字体大小和行高与 hash_id 聚合图保持一致。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
+response 长度分布图按 req_id 展示最终 attempt 的 response 长度，字体大小和行高与 hash_id 聚合图保持一致。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示；图上方会显示 0 到 120k 的标尺，每 10k 一个刻度。
 
-response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细横线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id、长度和评测结果。
+response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细横线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id、长度和评测结果。图右侧每 100 条显示一个位置标尺。
 
-调用 `analysis_html(..., enable_hash_repeat_chart=True)` 时会显示 hash_id 聚合紧凑分布图和 hash_id 聚合图。聚合用的 hash_id 由 user message/prompt 规范化后重新计算，避免真实日志中同一 prompt 但原始 hash_id 不一致导致分组错误。聚合图按 hash 升序排序，并用紧凑行展示平均 response 长度和 `正确次数/总次数`，两项数据保持在同一行；总次数可用 `repeat_group_size` 指定。聚合长度同样以 120k token 为满刻度。
+调用 `analysis_html(..., enable_hash_repeat_chart=True)` 时会显示 hash_id 聚合紧凑分布图和 hash_id 聚合图。聚合用的 hash_id 由 user message/prompt 规范化后重新计算，避免真实日志中同一 prompt 但原始 hash_id 不一致导致分组错误。聚合紧凑分布图右侧每 100 条显示一个位置标尺。聚合图按 hash 升序排序，并用紧凑行展示平均 response 长度和 `正确次数/总次数`，两项数据保持在同一行；聚合图上方显示 0 到 120k 的标尺，每 10k 一个刻度；总次数可用 `repeat_group_size` 指定。聚合长度同样以 120k token 为满刻度。
 
 ## 常见问题
 

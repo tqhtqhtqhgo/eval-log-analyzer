@@ -71,9 +71,15 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "通过但做错=1" in html
     assert "链路失败=1" in html
     assert "response 长度紧凑分布图" in html
+    assert "compact-chart-with-scale" in html
+    assert "compact-row-scale" in html
     assert "compact-length-line" in html
     assert "response 长度分布图" in html
     assert "response-length-row" in html
+    assert "length-scale-row response" in html
+    assert "length-scale-row hash" in html
+    assert "10k" in html
+    assert "120k" in html
     assert "retry-table" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
