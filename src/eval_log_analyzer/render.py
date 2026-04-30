@@ -90,17 +90,30 @@ def _render_core_cards(metrics: Metrics) -> str:
 
 
 def _render_core_boxplots(boxplots: dict[str, Any]) -> str:
-    items = [
+    all_items = [
         ("complete tokens", boxplots.get("complete_tokens")),
         ("reasoning tokens", boxplots.get("reasoning_token")),
         ("content tokens", boxplots.get("content_token")),
         ("used_time", boxplots.get("used_time")),
         ("total_used_time", boxplots.get("total_used_time")),
     ]
+    nonzero_items = [
+        ("complete tokens 非零", boxplots.get("complete_tokens_nonzero")),
+        ("reasoning tokens 非零", boxplots.get("reasoning_token_nonzero")),
+        ("content tokens 非零", boxplots.get("content_token_nonzero")),
+    ]
+    all_charts = _boxplot_row("全部数据", all_items)
+    nonzero_charts = _boxplot_row("tokens 非零数据", nonzero_items)
+    if not all_charts and not nonzero_charts:
+        return ""
+    return f"<h3>核心指标箱线图</h3>{all_charts}{nonzero_charts}"
+
+
+def _boxplot_row(title: str, items: list[tuple[str, Any]]) -> str:
     charts = "".join(_boxplot_card(label, boxplot) for label, boxplot in items if boxplot)
     if not charts:
         return ""
-    return f"<h3>核心指标箱线图</h3><div class=\"boxplot-grid\">{charts}</div>"
+    return f"<div class=\"boxplot-row-title\">{_escape(title)}</div><div class=\"boxplot-grid\">{charts}</div>"
 
 
 def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:

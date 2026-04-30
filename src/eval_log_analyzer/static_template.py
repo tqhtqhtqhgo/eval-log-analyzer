@@ -54,6 +54,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .compact-length-line.bad { background: var(--bad); }
 .compact-length-line.warn { background: var(--warn); }
 .boxplot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.boxplot-row-title { color: var(--muted); font-size: 13px; font-weight: 650; margin: 12px 0 8px; }
 .boxplot-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); min-height: 178px; }
 .boxplot { position: relative; width: 78px; height: 84px; margin: 12px auto 0; border-left: 1px solid #dce3ee; border-bottom: 1px solid #dce3ee; }
 .boxplot .whisker { position: absolute; left: 38px; width: 2px; background: #475467; }

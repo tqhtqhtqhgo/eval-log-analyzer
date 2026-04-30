@@ -58,6 +58,11 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "做对" in html
     assert "boxplot" in html
     assert "核心指标箱线图" in html
+    assert "全部数据" in html
+    assert "tokens 非零数据" in html
+    assert "complete tokens 非零" in html
+    assert "reasoning tokens 非零" in html
+    assert "content tokens 非零" in html
     assert "boxplot-card" in html
     assert "平均 total_used_time" in html
     assert "min" in html

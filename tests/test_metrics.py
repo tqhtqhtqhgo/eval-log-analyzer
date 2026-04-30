@@ -18,6 +18,7 @@ def test_calculate_export_and_trace_metrics() -> None:
     export_rows = [
         {"req_id": "r1", "eval_result": "TRUE", "complete_tokens": 10, "reasoning_token": 3, "content_token": 7, "used_time": "1.5", "total_used_time": 2.0, "infer_retry": "否", "retry_success": "", "model_version": "m", "dataset_name": "d", "judge_model": "j"},
         {"req_id": "r2", "eval_result": "FALSE", "complete_tokens": 20, "reasoning_token": 4, "content_token": 8, "used_time": "2.5", "total_used_time": 3.0, "infer_retry": "是", "retry_success": "是", "exception": "Content OutOfMaxLength: x"},
+        {"req_id": "r3", "eval_result": "FALSE", "complete_tokens": 0, "reasoning_token": 0, "content_token": 0, "used_time": "", "total_used_time": "", "infer_retry": "否", "retry_success": ""},
     ]
 
     metrics = calculate_metrics(
@@ -32,15 +33,18 @@ def test_calculate_export_and_trace_metrics() -> None:
         zip_name="mini.zip",
     )
 
-    assert metrics.export_summary["total"] == 2
+    assert metrics.export_summary["total"] == 3
     assert metrics.export_summary["passed"] == 1
-    assert metrics.export_summary["pass_rate"] == 0.5
-    assert metrics.export_summary["avg_complete_tokens"] == 15
+    assert metrics.export_summary["pass_rate"] == 1 / 3
+    assert metrics.export_summary["avg_complete_tokens"] == 10
     assert metrics.export_summary["avg_used_time"] == 2
-    assert metrics.export_summary["boxplots"]["complete_tokens"]["median"] == 15
+    assert metrics.export_summary["boxplots"]["complete_tokens"]["median"] == 10
+    assert metrics.export_summary["boxplots"]["complete_tokens_nonzero"]["median"] == 15
+    assert metrics.export_summary["boxplots"]["reasoning_token_nonzero"]["min"] == 3
+    assert metrics.export_summary["boxplots"]["content_token_nonzero"]["min"] == 7
     assert metrics.export_summary["boxplots"]["total_used_time"]["q1"] == 2.25
     assert metrics.export_summary["boxplots"]["total_used_time"]["q3"] == 2.75
-    assert metrics.eval_results == {"r1": True, "r2": False}
+    assert metrics.eval_results == {"r1": True, "r2": False, "r3": False}
     assert metrics.export_summary["retry_count"] == 1
     assert metrics.export_summary["retry_success_count"] == 1
     assert metrics.trace_summary["retry_req_id_count"] == 1

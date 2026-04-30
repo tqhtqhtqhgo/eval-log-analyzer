@@ -132,6 +132,9 @@ def _export_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "content_token": _boxplot(row.get("content_token") for row in rows),
             "used_time": _boxplot(row.get("used_time") for row in rows),
             "total_used_time": _boxplot(row.get("total_used_time") for row in rows),
+            "complete_tokens_nonzero": _boxplot_nonzero(row.get("complete_tokens") for row in rows),
+            "reasoning_token_nonzero": _boxplot_nonzero(row.get("reasoning_token") for row in rows),
+            "content_token_nonzero": _boxplot_nonzero(row.get("content_token") for row in rows),
         },
         "retry_count": len(retry_rows),
         "retry_success_count": len(retry_success),
@@ -343,6 +346,11 @@ def _boxplot(values: object) -> dict[str, float | int] | None:
         "max": round(numbers[-1], 2),
         "avg": round(sum(numbers) / len(numbers), 2),
     }
+
+
+def _boxplot_nonzero(values: object) -> dict[str, float | int] | None:
+    numbers = [_to_float(value) for value in values]
+    return _boxplot(value for value in numbers if value is not None and value != 0)
 
 
 def _percentile(numbers: list[float], ratio: float) -> float:
