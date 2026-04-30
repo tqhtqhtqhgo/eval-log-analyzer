@@ -38,6 +38,8 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert metrics.export_summary["avg_complete_tokens"] == 15
     assert metrics.export_summary["avg_used_time"] == 2
     assert metrics.export_summary["boxplots"]["complete_tokens"]["median"] == 15
+    assert metrics.export_summary["boxplots"]["total_used_time"]["q1"] == 2.25
+    assert metrics.export_summary["boxplots"]["total_used_time"]["q3"] == 2.75
     assert metrics.eval_results == {"r1": True, "r2": False}
     assert metrics.export_summary["retry_count"] == 1
     assert metrics.export_summary["retry_success_count"] == 1

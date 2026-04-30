@@ -52,12 +52,16 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .compact-length-line.ok { background: var(--ok); }
 .compact-length-line.bad { background: var(--bad); }
 .compact-length-line.warn { background: var(--warn); }
-.metric-card { min-height: 122px; }
-.boxplot { position: relative; height: 24px; margin-top: 12px; }
-.boxplot::before { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 2px; background: #dce3ee; }
-.boxplot .whisker { position: absolute; top: 11px; height: 2px; background: #475467; }
-.boxplot .box { position: absolute; top: 6px; height: 12px; border: 2px solid #475467; background: rgba(71, 84, 103, .12); border-radius: 3px; }
-.boxplot .median { position: absolute; top: 3px; width: 2px; height: 18px; background: var(--bad); }
+.metric-card { min-height: 178px; }
+.boxplot { position: relative; width: 78px; height: 84px; margin: 12px auto 0; border-left: 1px solid #dce3ee; border-bottom: 1px solid #dce3ee; }
+.boxplot .whisker { position: absolute; left: 38px; width: 2px; background: #475467; }
+.boxplot .cap { position: absolute; left: 29px; width: 20px; height: 2px; background: #475467; }
+.boxplot .box { position: absolute; left: 24px; width: 30px; border: 2px solid #475467; background: rgba(71, 84, 103, .12); border-radius: 3px; }
+.boxplot .quartile { position: absolute; left: 20px; width: 38px; height: 1px; background: #475467; }
+.boxplot .quartile::after { position: absolute; left: 42px; top: -8px; color: var(--muted); font-size: 10px; }
+.boxplot .q1::after { content: "p25"; }
+.boxplot .q3::after { content: "p75"; }
+.boxplot .median { position: absolute; left: 18px; width: 42px; height: 2px; background: var(--bad); }
 .boxplot-meta { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 10; }
 .modal-backdrop.open { display: flex; }

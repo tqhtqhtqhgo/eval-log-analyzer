@@ -131,6 +131,7 @@ def _export_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "reasoning_token": _boxplot(row.get("reasoning_token") for row in rows),
             "content_token": _boxplot(row.get("content_token") for row in rows),
             "used_time": _boxplot(row.get("used_time") for row in rows),
+            "total_used_time": _boxplot(row.get("total_used_time") for row in rows),
         },
         "retry_count": len(retry_rows),
         "retry_success_count": len(retry_success),

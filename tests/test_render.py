@@ -13,7 +13,20 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
 """
     )
     metrics = calculate_metrics(
-        [{"req_id": "r1", "eval_result": "TRUE", "model_version": "m1", "dataset_name": "d1", "judge_model": "j1"}],
+        [
+            {
+                "req_id": "r1",
+                "eval_result": "TRUE",
+                "complete_tokens": 7,
+                "reasoning_token": 3,
+                "content_token": 4,
+                "used_time": 1.2,
+                "total_used_time": 1.5,
+                "model_version": "m1",
+                "dataset_name": "d1",
+                "judge_model": "j1",
+            }
+        ],
         parsed.traces,
         log_name="mini.log",
         zip_name="mini.zip",
@@ -37,6 +50,10 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "data-eval-failed=\"false\"" in html
     assert "做对" in html
     assert "boxplot" in html
+    assert "平均 total_used_time" in html
+    assert "p25" in html
+    assert "p75" in html
+    assert "style=\"bottom:" in html
     assert "style=\"width:1%\"" in html
     assert "elaToggleFailureFilter" in html
     assert "elaToggleEvalFailedFilter" in html

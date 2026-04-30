@@ -64,7 +64,7 @@ print(html_path)
 
 基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。
 
-核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终失败数量、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens 和 used_time 会保留平均值，并在同一卡片内展示箱线图，便于查看全量数据分布。
+核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终失败数量、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens、used_time 和 total_used_time 会保留平均值，并在同一卡片内展示竖向箱线图，标出 1/4 分位、3/4 分位和中位数，便于查看全量数据分布。
 
 重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态，最后一列展示该题评测结果是做对还是做错。多次重试中只要有一次 attempt 成功，最终链路就按成功展示，并打开那次成功 attempt 的 JSON。点击状态符号或最终链路结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。“只看过程失败”按钮会筛出过程中出现失败的题，包括最终失败和重试后成功的题；“只看做错”按钮会筛出评测结果为做错的题。
 

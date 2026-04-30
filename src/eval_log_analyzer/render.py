@@ -70,9 +70,9 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("平均 reasoning tokens", export.get("avg_reasoning_token"), boxplots.get("reasoning_token")),
         ("平均 content tokens", export.get("avg_content_token"), boxplots.get("content_token")),
         ("平均 used_time", export.get("avg_used_time"), boxplots.get("used_time")),
+        ("平均 total_used_time", export.get("avg_total_used_time"), boxplots.get("total_used_time")),
     ]
     items = [
-        ("平均 total_used_time", export.get("avg_total_used_time")),
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
         ("最终失败数量", trace.get("final_failed_count")),
@@ -243,16 +243,24 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
     median_pos = _box_percent(boxplot.get("median"), maximum)
     q3_pos = _box_percent(boxplot.get("q3"), maximum)
     max_pos = _box_percent(boxplot.get("max"), maximum)
+    box_bottom = min(q1_pos, q3_pos)
+    box_height = max(1, abs(q3_pos - q1_pos))
+    whisker_bottom = min(min_pos, max_pos)
+    whisker_height = max(1, abs(max_pos - min_pos))
     title = (
         f"count={boxplot.get('count')} min={boxplot.get('min')} q1={boxplot.get('q1')} "
         f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')}"
     )
     return (
         f"<div class=\"boxplot\" title=\"{_escape(title)}\">"
-        f"<span class=\"whisker\" style=\"left:{min_pos}%;width:{max(1, max_pos - min_pos)}%\"></span>"
-        f"<span class=\"box\" style=\"left:{q1_pos}%;width:{max(1, q3_pos - q1_pos)}%\"></span>"
-        f"<span class=\"median\" style=\"left:{median_pos}%\"></span></div>"
-        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p50 {boxplot.get('median')} · max {boxplot.get('max')}</div>"
+        f"<span class=\"whisker\" style=\"bottom:{whisker_bottom}%;height:{whisker_height}%\"></span>"
+        f"<span class=\"cap min\" style=\"bottom:{min_pos}%\"></span>"
+        f"<span class=\"cap max\" style=\"bottom:{max_pos}%\"></span>"
+        f"<span class=\"box\" style=\"bottom:{box_bottom}%;height:{box_height}%\"></span>"
+        f"<span class=\"quartile q1\" style=\"bottom:{q1_pos}%\"></span>"
+        f"<span class=\"quartile q3\" style=\"bottom:{q3_pos}%\"></span>"
+        f"<span class=\"median\" style=\"bottom:{median_pos}%\"></span></div>"
+        f"<div class=\"boxplot-meta\">p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')}</div>"
     )
 
 
