@@ -70,10 +70,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "通过且做对=1" in html
     assert "通过但做错=1" in html
     assert "链路失败=1" in html
-    assert "response 长度紧凑分布图" in html
-    assert "compact-chart-with-scale" in html
-    assert "compact-row-scale" in html
-    assert "compact-length-line" in html
+    assert "response 长度紧凑分布图" not in html
     assert "response 长度点阵图" in html
     assert "beeswarm-chart" in html
     assert "beeswarm-point" in html
@@ -84,7 +81,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "response 长度分布图" in html
     assert "response-length-row" in html
     assert "length-scale-row response" in html
-    assert "length-scale-row hash" in html
+    assert "length-scale-row hash" not in html
     assert "10k" in html
     assert "120k" in html
     assert "retry-table" in html
@@ -93,6 +90,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "只看链路成功" in html
     assert "只看链路失败" in html
     assert "评测结果" in html
+    assert "<th>hash_id</th>" in html
+    assert "搜索 req_id / hash_id / prompt / 失败原因" in html
     assert "data-eval-failed=\"true\"" in html
     assert "data-eval-failed=\"false\"" in html
     assert "data-final-success=\"true\"" in html
@@ -118,6 +117,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "reasoning tokens 非零" in html
     assert "content tokens 非零" in html
     assert "boxplot-card" in html
+    assert "scale 120k" in html
     assert "平均 total_used_time" in html
     assert "min" in html
     assert "max" in html
@@ -129,11 +129,11 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "elaToggleEvalFailedFilter" in html
     assert "elaToggleFinalSuccessFilter" in html
     assert "elaToggleFinalFailedFilter" in html
-    assert "hash_id 重复评测聚合紧凑分布图" in html
-    assert "hash_id 重复评测聚合图" in html
-    assert "hash-repeat-row" in html
-    assert "hash-repeat-value" in html
-    assert "elaOpenHash" in html
+    assert "hash_id 重复评测聚合紧凑分布图" not in html
+    assert "hash_id 重复评测聚合图" not in html
+    assert "hash-repeat-row" not in html
+    assert "hash-repeat-value" not in html
+    assert html.rfind("重试链路表") > html.rfind("response 长度分布图")
     assert "r1" in html
     assert "elaOpenAttempt" in html
     assert "json-modal" in html

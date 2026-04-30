@@ -22,10 +22,9 @@ def render_html(
     traces = traces or []
     display_traces = _sorted_traces(traces)
     attempt_payload = _attempt_payload(display_traces)
-    hash_payload = _hash_group_payload(metrics, traces)
     js = (
         "window.__evalLogAnalyzer = "
-        f"{{attempts: {to_json_script(attempt_payload)}, hashGroups: {to_json_script(hash_payload)}}};\n{BASE_JS}"
+        f"{{attempts: {to_json_script(attempt_payload)}, hashGroups: {{}}}};\n{BASE_JS}"
     )
     body = "\n".join(
         [
@@ -35,11 +34,9 @@ def render_html(
             _render_core_cards(metrics),
             _render_retry_pie_chart(display_traces, metrics),
             _render_exception_summary(metrics.exception_summary),
-            _render_retry_table(display_traces, metrics, max_attempt_columns),
-            _render_compact_response_length_chart(display_traces, metrics),
             _render_response_beeswarm_chart(display_traces, metrics),
             _render_response_length_chart(display_traces, metrics),
-            _render_hash_repeat_chart(metrics, enable_hash_repeat_chart),
+            _render_retry_table(display_traces, metrics, max_attempt_columns),
             "</main>",
             _render_modal(),
         ]
@@ -78,9 +75,6 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
         ("最终链路失败数量", trace.get("final_failed_count")),
         ("推理成功题目数量（不含链路失败）", trace.get("final_success_count")),
-        ("empty 数量", export.get("empty_count")),
-        ("overlength 数量", export.get("overlength_count")),
-        ("timeout 数量", export.get("timeout_attempt_count")),
     ]
     return (
         "<section><h2>核心指标</h2><div class=\"grid\">"
@@ -201,25 +195,26 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         eval_failed = eval_result is False
         final_success = trace.final_success
         final_failed = not trace.final_success
-        search_text = " ".join([trace.req_id, trace.prompt] + [a.failure_reason for a in trace.attempts]).lower()
+        hash_id = _trace_hash_id(trace)
+        search_text = " ".join([trace.req_id, hash_id, trace.prompt] + [a.failure_reason for a in trace.attempts]).lower()
         rows.append(
             f"<tr data-retry-row data-has-failure=\"{str(has_failure).lower()}\" "
             f"data-eval-failed=\"{str(eval_failed).lower()}\" data-final-success=\"{str(final_success).lower()}\" "
             f"data-final-failed=\"{str(final_failed).lower()}\" "
             f"data-search=\"{_escape(search_text)}\">"
-            f"<td>{display_id}</td><td>{_escape(trace.req_id)}</td>"
+            f"<td>{display_id}</td><td>{_escape(trace.req_id)}</td><td>{_escape(hash_id)}</td>"
             + "".join(attempt_cells)
             + f"<td><button class=\"{final_class}\" onclick=\"elaOpenAttempt('{final_id}')\">{final_symbol}</button></td>"
             + f"<td><span class=\"result-pill {eval_class}\">{eval_text}</span></td></tr>"
         )
     return (
         "<section><h2>重试链路表</h2>"
-        "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
+        "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / hash_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
         "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
         "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button>"
         "<button id=\"final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter()\">只看链路成功</button>"
         "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看链路失败</button></div>"
-        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
 
@@ -236,24 +231,6 @@ def _render_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> s
             f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
         )
     return f"<section><h2>response 长度分布图</h2>{_render_length_scale('response')}{''.join(rows)}</section>"
-
-
-def _render_compact_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
-    lines = []
-    for display_id, trace in enumerate(traces, start=1):
-        width = _fixed_width(trace.final_response_length)
-        status = _status_class(trace, metrics.eval_results.get(trace.req_id))
-        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
-        title = f"id={display_id} req_id={trace.req_id} 长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
-        lines.append(
-            f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
-            f"style=\"width:{width}%\" onclick=\"elaOpenAttempt('{final_id}')\"></div>"
-        )
-    return (
-        "<section><h2>response 长度紧凑分布图</h2>"
-        f"<div class=\"compact-chart-with-scale\"><div class=\"compact-length-chart\">{''.join(lines)}</div>{_render_compact_row_scale(len(traces))}</div>"
-        "</section>"
-    )
 
 
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
@@ -312,45 +289,12 @@ def _render_success_response_length_boxplots(traces: list[ReqTrace], metrics: Me
     )
 
 
-def _render_hash_repeat_chart(metrics: Metrics, enabled: bool) -> str:
-    if not enabled:
-        return ""
-    groups = metrics.hash_repeat_groups
-    rows = []
-    compact_lines = []
-    for group in groups:
-        width = _fixed_width(float(group["avg_response_length"]))
-        status = "ok" if group["correct_count"] > 0 else "bad"
-        title = f"hash_id={group['hash_id']} 平均长度={group['avg_response_length']} 正确={group['correct_count']}/{group['total_count']}"
-        rows.append(
-            f"<div class=\"hash-repeat-row\" title=\"{_escape(title)}\" onclick=\"elaOpenHash('{group['id']}')\">"
-            f"<div>{group['id']}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
-            f"<div class=\"hash-repeat-value\"><span>{_escape(group['avg_response_length'])}</span><span>{group['correct_count']}/{group['total_count']}</span></div></div>"
-        )
-        compact_lines.append(
-            f"<div class=\"compact-length-line {status}\" title=\"{_escape(title)}\" "
-            f"style=\"width:{width}%\" onclick=\"elaOpenHash('{group['id']}')\"></div>"
-        )
-    return (
-        f"<section><h2>hash_id 重复评测聚合紧凑分布图</h2><div class=\"compact-chart-with-scale\"><div class=\"compact-length-chart\">{''.join(compact_lines)}</div>{_render_compact_row_scale(len(groups))}</div></section>"
-        f"<section><h2>hash_id 重复评测聚合图</h2>{_render_length_scale('hash')}{''.join(rows)}</section>"
-    )
-
-
 def _render_length_scale(kind: str) -> str:
     labels = "".join(f"<span>{value}k</span>" for value in range(0, 121, 10))
     return (
         f"<div class=\"length-scale-row {kind}\"><div></div>"
         f"<div class=\"length-scale-track\">{labels}</div><div></div></div>"
     )
-
-
-def _render_compact_row_scale(count: int) -> str:
-    ticks = []
-    for value in range(100, count + 1, 100):
-        top = min(100, round((value - 0.5) / max(count, 1) * 100, 3))
-        ticks.append(f"<span style=\"top:{top}%\">{value}</span>")
-    return f"<div class=\"compact-row-scale\">{''.join(ticks)}</div>"
 
 
 def _render_modal() -> str:
@@ -391,9 +335,7 @@ def _boxplot_card(label: str, boxplot: dict[str, Any]) -> str:
 
 
 def _boxplot_html(boxplot: dict[str, Any]) -> str:
-    maximum = float(boxplot.get("max") or 0)
-    if maximum <= 0:
-        maximum = 1
+    maximum = 120000.0
     min_pos = _box_percent(boxplot.get("min"), maximum)
     q1_pos = _box_percent(boxplot.get("q1"), maximum)
     median_pos = _box_percent(boxplot.get("median"), maximum)
@@ -405,7 +347,7 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
     whisker_height = max(1, abs(max_pos - min_pos))
     title = (
         f"count={boxplot.get('count')} min={boxplot.get('min')} q1={boxplot.get('q1')} "
-        f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')}"
+        f"median={boxplot.get('median')} q3={boxplot.get('q3')} max={boxplot.get('max')} scale=0-120000"
     )
     return (
         f"<div class=\"boxplot\" title=\"{_escape(title)}\">"
@@ -416,7 +358,7 @@ def _boxplot_html(boxplot: dict[str, Any]) -> str:
         f"<span class=\"quartile q1\" style=\"bottom:{q1_pos}%\"></span>"
         f"<span class=\"quartile q3\" style=\"bottom:{q3_pos}%\"></span>"
         f"<span class=\"median\" style=\"bottom:{median_pos}%\"></span></div>"
-        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')} · max {boxplot.get('max')}</div>"
+        f"<div class=\"boxplot-meta\">min {boxplot.get('min')} · p25 {boxplot.get('q1')} · p50 {boxplot.get('median')} · p75 {boxplot.get('q3')} · max {boxplot.get('max')} · scale 120k</div>"
     )
 
 
@@ -464,7 +406,11 @@ def _escape(value: Any) -> str:
 
 
 def _sorted_traces(traces: list[ReqTrace]) -> list[ReqTrace]:
-    return sorted(traces, key=lambda trace: (stable_trace_hash(trace), trace.req_id))
+    return sorted(traces, key=lambda trace: (_trace_hash_id(trace), trace.req_id))
+
+
+def _trace_hash_id(trace: ReqTrace) -> str:
+    return trace.hash_id or stable_trace_hash(trace)
 
 
 def _fixed_width(length: int | float) -> int:
@@ -525,27 +471,6 @@ def _attempt_payload(traces: list[ReqTrace]) -> dict[str, Any]:
                 "request_json": attempt.request_json,
                 "response_json": attempt.response_json,
             }
-    return payload
-
-
-def _hash_group_payload(metrics: Metrics, traces: list[ReqTrace]) -> dict[str, Any]:
-    trace_by_req = {trace.req_id: trace for trace in traces}
-    payload: dict[str, Any] = {}
-    for group in metrics.hash_repeat_groups:
-        items = []
-        for req_id in group["req_ids"]:
-            trace = trace_by_req.get(req_id)
-            final_attempt = trace.final_attempt if trace else None
-            items.append(
-                {
-                    "req_id": req_id,
-                    "final_success": trace.final_success if trace else False,
-                    "response_length": trace.final_response_length if trace else 0,
-                    "request_json": final_attempt.request_json if final_attempt else None,
-                    "response_json": final_attempt.response_json if final_attempt else None,
-                }
-            )
-        payload[str(group["id"])] = {**group, "items": items}
     return payload
 
 

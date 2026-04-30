@@ -41,7 +41,7 @@ def calculate_metrics(
     export_summary = _export_summary(export_rows)
     eval_results = _eval_results(export_rows)
     trace_summary = _trace_summary(req_traces, parse_error_count)
-    optional_summary = _optional_file_summary(empty_result, overlength_result, timeout_result, duplicate_result)
+    optional_summary = _optional_file_summary(duplicate_result)
     basic_info = _basic_info(xlsx_rows or [], export_rows, export_summary, log_name, zip_name)
     exception_summary = _exception_summary(export_summary, trace_summary, optional_summary)
     hash_repeat_groups = build_hash_repeat_groups(req_traces, export_rows, repeat_group_size)
@@ -138,9 +138,9 @@ def _export_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "retry_count": len(retry_rows),
         "retry_success_count": len(retry_success),
-        "timeout_count": sum(1 for row in rows if _to_float(row.get("time_out")) or _to_float(row.get("time_out_times"))),
         "exception_count": len(exception_rows),
         "exception_distribution": dict(Counter(_exception_name(row) for row in exception_rows)),
+        "exception_categories": _exception_categories(rows),
     }
 
 
@@ -178,20 +178,8 @@ def _is_final_content_empty(trace: ReqTrace) -> bool:
     )
 
 
-def _optional_file_summary(
-    empty_result: Any | None,
-    overlength_result: Any | None,
-    timeout_result: Any | None,
-    duplicate_result: Any | None,
-) -> dict[str, Any]:
+def _optional_file_summary(duplicate_result: Any | None) -> dict[str, Any]:
     return {
-        "empty_count": _count_items(empty_result),
-        "empty_distribution": _count_by_key(_flatten_items(empty_result), "output_reason"),
-        "overlength_count": _count_items(overlength_result),
-        "overlength_distribution": _overlength_distribution(overlength_result),
-        "timeout_req_id_count": len(timeout_result) if isinstance(timeout_result, dict) else 0,
-        "timeout_attempt_count": _timeout_attempt_count(timeout_result),
-        "timeout_distribution": _count_by_key(_flatten_timeout(timeout_result), "output_reason"),
         "duplicate_exists": duplicate_result is not None,
         "duplicate_count": _count_items(duplicate_result),
     }
@@ -225,9 +213,21 @@ def _exception_summary(
     optional_summary: dict[str, Any],
 ) -> list[dict[str, Any]]:
     return [
-        {"type": "empty_result", "count": optional_summary["empty_count"], "description": "content 为空"},
-        {"type": "overlength_result", "count": optional_summary["overlength_count"], "description": "输出超长"},
-        {"type": "timeout", "count": optional_summary["timeout_attempt_count"], "description": "超时或超长重试"},
+        {
+            "type": "Content OutOfMaxLength",
+            "count": export_summary["exception_categories"]["content_out_of_max_length"],
+            "description": "exception 以 Content OutOfMaxLength 开头",
+        },
+        {
+            "type": "timeout",
+            "count": export_summary["exception_categories"]["streaming_parse_timeout"],
+            "description": "exception 以 Streaming parse timeout 开头",
+        },
+        {
+            "type": "HTTP Connection 异常",
+            "count": export_summary["exception_categories"]["http_connection"],
+            "description": "exception 包含 HTTPConnection",
+        },
         {
             "type": "duplicate_result",
             "count": optional_summary["duplicate_count"],
@@ -281,6 +281,35 @@ def _exception_name(row: dict[str, Any]) -> str:
     return "unknown_exception"
 
 
+def _exception_categories(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """按报告约定从 response exception 文本统计关键异常类型。"""
+    counter = {
+        "content_out_of_max_length": 0,
+        "streaming_parse_timeout": 0,
+        "http_connection": 0,
+    }
+    for row in rows:
+        texts = _exception_texts(row)
+        if any(text.startswith("Content OutOfMaxLength") for text in texts):
+            counter["content_out_of_max_length"] += 1
+        if any(text.startswith("Streaming parse timeout") for text in texts):
+            counter["streaming_parse_timeout"] += 1
+        if any("HTTPConnection" in text for text in texts):
+            counter["http_connection"] += 1
+    return counter
+
+
+def _exception_texts(row: dict[str, Any]) -> list[str]:
+    texts: list[str] = []
+    exception = row.get("exception")
+    if exception:
+        texts.append(str(exception))
+    exception_list = row.get("exception_list")
+    if isinstance(exception_list, list):
+        texts.extend(str(item) for item in exception_list if item)
+    return texts
+
+
 def _count_items(value: Any | None) -> int:
     if value is None:
         return 0
@@ -289,47 +318,6 @@ def _count_items(value: Any | None) -> int:
     if isinstance(value, dict):
         return len(value)
     return 1
-
-
-def _flatten_items(value: Any | None) -> list[dict[str, Any]]:
-    if isinstance(value, list):
-        return [item for item in value if isinstance(item, dict)]
-    if isinstance(value, dict):
-        return [value]
-    return []
-
-
-def _flatten_timeout(value: Any | None) -> list[dict[str, Any]]:
-    if not isinstance(value, dict):
-        return []
-    items: list[dict[str, Any]] = []
-    for attempts in value.values():
-        if isinstance(attempts, list):
-            items.extend(item for item in attempts if isinstance(item, dict))
-    return items
-
-
-def _timeout_attempt_count(value: Any | None) -> int:
-    return len(_flatten_timeout(value))
-
-
-def _count_by_key(items: list[dict[str, Any]], key: str) -> dict[str, int]:
-    return dict(Counter(str(item.get(key) or "unknown") for item in items))
-
-
-def _overlength_distribution(value: Any | None) -> dict[str, int]:
-    counter: Counter[str] = Counter()
-    for item in _flatten_items(value):
-        text = str(item.get("output_reason") or item.get("exception") or "")
-        if "Content OutOfMaxLength" in text:
-            counter["Content OutOfMaxLength"] += 1
-        elif "Reasoning OutOfMaxLength" in text:
-            counter["Reasoning OutOfMaxLength"] += 1
-        elif "OutOfMaxLength" in text:
-            counter["Other OutOfMaxLength"] += 1
-        else:
-            counter["unknown"] += 1
-    return dict(counter)
 
 
 def _avg(values: object) -> float:

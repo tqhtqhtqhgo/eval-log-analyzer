@@ -16,9 +16,9 @@ def test_calculate_export_and_trace_metrics() -> None:
 """
     )
     export_rows = [
-        {"req_id": "r1", "eval_result": "True", "complete_tokens": 10, "reasoning_token": 3, "content_token": 7, "used_time": "1.5", "total_used_time": 2.0, "infer_retry": "否", "retry_success": "", "model_version": "m", "dataset_name": "d", "judge_model": "j"},
+        {"req_id": "r1", "eval_result": "True", "complete_tokens": 10, "reasoning_token": 3, "content_token": 7, "used_time": "1.5", "total_used_time": 2.0, "infer_retry": "否", "retry_success": "", "model_version": "m", "dataset_name": "d", "judge_model": "j", "exception_list": ["HTTPConnectionPool failed"]},
         {"req_id": "r2", "eval_result": "False", "complete_tokens": 20, "reasoning_token": 4, "content_token": 8, "used_time": "2.5", "total_used_time": 3.0, "infer_retry": "是", "retry_success": "是", "exception": "Content OutOfMaxLength: x"},
-        {"req_id": "r3", "eval_result": "False", "complete_tokens": 0, "reasoning_token": 0, "content_token": 0, "used_time": "", "total_used_time": "", "infer_retry": "否", "retry_success": ""},
+        {"req_id": "r3", "eval_result": "False", "complete_tokens": 0, "reasoning_token": 0, "content_token": 0, "used_time": "", "total_used_time": "", "infer_retry": "否", "retry_success": "", "exception": "Streaming parse timeout after 60s"},
     ]
 
     metrics = calculate_metrics(
@@ -53,8 +53,13 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert metrics.trace_summary["final_failed_count"] == 1
     assert metrics.trace_summary["final_content_empty_count"] == 1
     assert metrics.trace_summary["final_other_failed_count"] == 0
-    assert metrics.export_summary["exception_distribution"] == {"Content OutOfMaxLength": 1}
-    assert metrics.export_summary["empty_count"] == 1
+    assert metrics.export_summary["exception_categories"] == {
+        "content_out_of_max_length": 1,
+        "streaming_parse_timeout": 1,
+        "http_connection": 1,
+    }
+    assert all(row["type"] != "empty_result" for row in metrics.exception_summary)
+    assert all(row["type"] != "overlength_result" for row in metrics.exception_summary)
     assert metrics.basic_info["model"] == "m"
 
 

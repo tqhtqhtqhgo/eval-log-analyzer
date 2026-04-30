@@ -20,4 +20,5 @@ def test_analysis_html_fixture_generates_report(tmp_path: Path) -> None:
 
     assert "r_success" in html
     assert "r_retry" in html
-    assert "hash_id 重复评测聚合图" in html
+    assert "hash_id 重复评测聚合图" not in html
+    assert "<th>hash_id</th>" in html
