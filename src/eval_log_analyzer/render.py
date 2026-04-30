@@ -32,6 +32,7 @@ def render_html(
             "<h1>评测日志分析报告</h1>",
             _render_basic_info(metrics.basic_info),
             _render_core_cards(metrics),
+            _render_retry_pie_chart(metrics),
             _render_exception_summary(metrics.exception_summary),
             _render_retry_table(display_traces, metrics, max_attempt_columns),
             _render_compact_response_length_chart(display_traces, metrics),
@@ -76,6 +77,7 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
         ("最终失败数量", trace.get("final_failed_count")),
+        ("最终失败 content 为空", trace.get("final_content_empty_count")),
         ("empty 数量", export.get("empty_count")),
         ("overlength 数量", export.get("overlength_count")),
         ("timeout 数量", export.get("timeout_attempt_count")),
@@ -85,6 +87,40 @@ def _render_core_cards(metrics: Metrics) -> str:
         + "".join(_metric_card(k, v, boxplot) for k, v, boxplot in metric_cards)
         + "".join(_card(k, v) for k, v in items)
         + "</div></section>"
+    )
+
+
+def _render_retry_pie_chart(metrics: Metrics) -> str:
+    trace = metrics.trace_summary
+    total = int(trace.get("req_id_total") or 0)
+    success = int(trace.get("final_success_count") or 0)
+    content_empty = int(trace.get("final_content_empty_count") or 0)
+    other_failed = int(trace.get("final_other_failed_count") or 0)
+    if total <= 0:
+        return ""
+    success_deg = round(success / total * 360, 2)
+    empty_deg = round(content_empty / total * 360, 2)
+    style = (
+        "background:conic-gradient("
+        f"var(--ok) 0deg {success_deg}deg,"
+        f"var(--warn) {success_deg}deg {success_deg + empty_deg}deg,"
+        f"var(--bad) {success_deg + empty_deg}deg 360deg)"
+    )
+    legend = [
+        ("ok", "最终链路成功", success),
+        ("warn", "最终失败 content 为空", content_empty),
+        ("bad", "其他最终失败", other_failed),
+    ]
+    legend_html = "".join(
+        f"<div class=\"pie-legend-item\"><span class=\"legend-dot {klass}\"></span>{label}<b>{count}</b></div>"
+        for klass, label, count in legend
+    )
+    return (
+        "<section><h2>重试链路最终状态饼图</h2>"
+        "<div class=\"pie-wrap\">"
+        f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 成功={success} content为空={content_empty} 其他失败={other_failed}\"></div>"
+        f"<div class=\"pie-legend\">{legend_html}</div>"
+        "</div></section>"
     )
 
 

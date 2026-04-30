@@ -152,14 +152,27 @@ def _eval_results(rows: list[dict[str, Any]]) -> dict[str, bool | None]:
 
 def _trace_summary(traces: list[ReqTrace], parse_error_count: int) -> dict[str, Any]:
     retry_traces = [trace for trace in traces if len(trace.attempts) > 1]
+    final_content_empty_count = sum(1 for trace in traces if _is_final_content_empty(trace))
+    final_success_count = sum(1 for trace in traces if trace.final_success)
+    final_failed_count = sum(1 for trace in traces if not trace.final_success)
     return {
         "req_id_total": len(traces),
-        "final_success_count": sum(1 for trace in traces if trace.final_success),
-        "final_failed_count": sum(1 for trace in traces if not trace.final_success),
+        "final_success_count": final_success_count,
+        "final_failed_count": final_failed_count,
+        "final_content_empty_count": final_content_empty_count,
+        "final_other_failed_count": max(0, final_failed_count - final_content_empty_count),
         "retry_req_id_count": len(retry_traces),
         "retry_final_success_count": sum(1 for trace in retry_traces if trace.final_success),
         "parse_error_count": parse_error_count,
     }
+
+
+def _is_final_content_empty(trace: ReqTrace) -> bool:
+    return bool(
+        not trace.final_success
+        and trace.final_attempt
+        and trace.final_attempt.failure_reason == "content_empty"
+    )
 
 
 def _optional_file_summary(

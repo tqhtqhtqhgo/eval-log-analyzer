@@ -40,6 +40,10 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "m1" in html
     assert "异常摘要" in html
     assert "重试链路表" in html
+    assert "重试链路最终状态饼图" in html
+    assert "pie-chart" in html
+    assert "最终链路成功" in html
+    assert "最终失败 content 为空" in html
     assert "response 长度紧凑分布图" in html
     assert "compact-length-line" in html
     assert "response 长度分布图" in html

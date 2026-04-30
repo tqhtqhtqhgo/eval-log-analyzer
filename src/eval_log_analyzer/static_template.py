@@ -63,6 +63,14 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .boxplot .q3::after { content: "p75"; }
 .boxplot .median { position: absolute; left: 18px; width: 42px; height: 2px; background: var(--bad); }
 .boxplot-meta { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.pie-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: var(--panel); }
+.pie-chart { width: 132px; height: 132px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 auto; }
+.pie-legend { display: grid; gap: 8px; min-width: 220px; }
+.pie-legend-item { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.legend-dot.ok { background: var(--ok); }
+.legend-dot.warn { background: var(--warn); }
+.legend-dot.bad { background: var(--bad); }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 10; }
 .modal-backdrop.open { display: flex; }
 .modal { background: #fff; border-radius: 8px; width: min(980px, 96vw); max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--line); }
