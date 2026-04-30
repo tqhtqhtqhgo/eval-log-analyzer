@@ -73,7 +73,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "response 长度紧凑分布图" in html
     assert "compact-length-line" in html
     assert "response 长度分布图" in html
-    assert "length-row" in html
+    assert "response-length-row" in html
+    assert "retry-table" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
     assert "只看链路失败" in html

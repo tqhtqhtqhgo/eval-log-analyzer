@@ -68,11 +68,11 @@ print(html_path)
 
 重试链路最终状态圆环图根据重试链路表的最终链路和 `export_data_list.json` 的 `eval_result` 绘制，分为链路通过且做对、链路通过但做错、链路失败三类。
 
-重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态，最后一列展示该题评测结果是做对还是做错。多次重试中只要有一次 attempt 成功，最终链路就按成功展示，并打开那次成功 attempt 的 JSON。点击状态符号或最终链路结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。“只看过程失败”按钮会筛出过程中出现失败的题，包括最终失败和重试后成功的题；“只看做错”按钮会筛出评测结果为做错的题；“只看链路失败”按钮会筛出最终链路失败的题。
+重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态，最后一列展示该题评测结果是做对还是做错，表格使用紧凑行高。多次重试中只要有一次 attempt 成功，最终链路就按成功展示，并打开那次成功 attempt 的 JSON。点击状态符号或最终链路结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。“只看过程失败”按钮会筛出过程中出现失败的题，包括最终失败和重试后成功的题；“只看做错”按钮会筛出评测结果为做错的题；“只看链路失败”按钮会筛出最终链路失败的题。
 
 重试链路表、response 长度紧凑分布图和 response 长度分布图都按 user content/prompt 的稳定 hash 排序，因此多次评测中同一题的位置会尽量保持一致。
 
-response 长度分布图按 req_id 展示最终 attempt 的 response 长度。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
+response 长度分布图按 req_id 展示最终 attempt 的 response 长度，字体大小和行高与 hash_id 聚合图保持一致。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
 
 response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细横线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id、长度和评测结果。
 

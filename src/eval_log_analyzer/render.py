@@ -214,7 +214,7 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
         "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button>"
         "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看链路失败</button></div>"
-        f"<table><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
 
@@ -226,7 +226,7 @@ def _render_response_length_chart(traces: list[ReqTrace], metrics: Metrics) -> s
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
         title = f"req_id={trace.req_id} prompt={trace.prompt} 长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
         rows.append(
-            f"<div class=\"length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\">"
+            f"<div class=\"response-length-row\" title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\">"
             f"<div>{display_id}</div><div class=\"bar-track\"><div class=\"bar {status}\" style=\"width:{width}%\"></div></div>"
             f"<div class=\"length-value\">{trace.final_response_length}</div></div>"
         )
