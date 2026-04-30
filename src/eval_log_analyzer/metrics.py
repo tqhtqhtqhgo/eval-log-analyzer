@@ -241,9 +241,14 @@ def _exception_summary(
 
 
 def _normalize_eval(value: Any) -> str:
-    if value in PASS_VALUES:
+    if value is True:
         return "PASS"
-    if value in FAIL_VALUES:
+    if value is False:
+        return "FAIL"
+    normalized = str(value).strip()
+    if normalized in PASS_VALUES:
+        return "PASS"
+    if normalized in FAIL_VALUES:
         return "FAIL"
     return "UNKNOWN"
 

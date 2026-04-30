@@ -10,13 +10,17 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
         """
 {"req_id":"r1","requests":{"messages":[{"role":"user","content":"p1"}]}}
 {"req_id":"r1","status_code":200,"usage":{"completion_tokens":7},"respMsg":{"content":"ok"}}
+{"req_id":"r2","requests":{"messages":[{"role":"user","content":"p2"}]}}
+{"req_id":"r2","status_code":200,"usage":{"completion_tokens":9},"respMsg":{"content":"ok"}}
+{"req_id":"r3","requests":{"messages":[{"role":"user","content":"p3"}]}}
+{"req_id":"r3","status_code":200,"respMsg":{"content":""}}
 """
     )
     metrics = calculate_metrics(
         [
             {
                 "req_id": "r1",
-                "eval_result": "TRUE",
+                "eval_result": "True",
                 "complete_tokens": 7,
                 "reasoning_token": 3,
                 "content_token": 4,
@@ -25,7 +29,25 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
                 "model_version": "m1",
                 "dataset_name": "d1",
                 "judge_model": "j1",
-            }
+            },
+            {
+                "req_id": "r2",
+                "eval_result": "False",
+                "complete_tokens": 9,
+                "reasoning_token": 0,
+                "content_token": 9,
+                "used_time": 1.8,
+                "total_used_time": 2.0,
+            },
+            {
+                "req_id": "r3",
+                "eval_result": "False",
+                "complete_tokens": 0,
+                "reasoning_token": 0,
+                "content_token": 0,
+                "used_time": "",
+                "total_used_time": "",
+            },
         ],
         parsed.traces,
         log_name="mini.log",
@@ -45,6 +67,9 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "链路通过且做对" in html
     assert "链路通过但做错" in html
     assert "链路失败" in html
+    assert "通过且做对=1" in html
+    assert "通过但做错=1" in html
+    assert "链路失败=1" in html
     assert "response 长度紧凑分布图" in html
     assert "compact-length-line" in html
     assert "response 长度分布图" in html
@@ -53,9 +78,14 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "只看做错" in html
     assert "只看链路失败" in html
     assert "评测结果" in html
+    assert "data-eval-failed=\"true\"" in html
     assert "data-eval-failed=\"false\"" in html
+    assert "data-final-failed=\"true\"" in html
     assert "data-final-failed=\"false\"" in html
     assert "做对" in html
+    assert "做错" in html
+    assert "bar bad" in html
+    assert "bar warn" in html
     assert "boxplot" in html
     assert "核心指标箱线图" in html
     assert "全部数据" in html

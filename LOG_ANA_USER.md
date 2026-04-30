@@ -62,17 +62,17 @@ print(html_path)
 
 ## 页面功能
 
-基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。
+基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。通过题数和通过率根据 `export_data_list.json` 中每个对象的 `eval_result` 判断，支持 `"True"` / `"False"` 字符串。
 
 核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终失败数量、最终失败 content 为空数量、empty 数量、overlength 数量和 timeout 数量。complete/reasoning/content tokens、used_time 和 total_used_time 会保留平均值，并在核心指标下方单独展示竖向箱线图，标出 min、1/4 分位、3/4 分位、中位数和 max。complete/reasoning/content tokens 还会额外展示过滤 0 后的非零箱线图，便于查看有效 token 数据分布。
 
-重试链路最终状态圆环图根据重试链路表的最终链路和评测结果绘制，分为链路通过且做对、链路通过但做错、链路失败三类。
+重试链路最终状态圆环图根据重试链路表的最终链路和 `export_data_list.json` 的 `eval_result` 绘制，分为链路通过且做对、链路通过但做错、链路失败三类。
 
 重试链路表中每个 req_id 一行，t1、t2 等列展示每次 attempt 的状态，最后一列展示该题评测结果是做对还是做错。多次重试中只要有一次 attempt 成功，最终链路就按成功展示，并打开那次成功 attempt 的 JSON。点击状态符号或最终链路结果可以查看该 attempt 的 request/response JSON；搜索框支持按 req_id、prompt、失败原因过滤。“只看过程失败”按钮会筛出过程中出现失败的题，包括最终失败和重试后成功的题；“只看做错”按钮会筛出评测结果为做错的题；“只看链路失败”按钮会筛出最终链路失败的题。
 
 重试链路表、response 长度紧凑分布图和 response 长度分布图都按 user content/prompt 的稳定 hash 排序，因此多次评测中同一题的位置会尽量保持一致。
 
-response 长度分布图按 req_id 展示最终 attempt 的 response 长度。绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
+response 长度分布图按 req_id 展示最终 attempt 的 response 长度。做对/做错只根据 `export_data_list.json` 的 `eval_result` 判断：绿色表示做对，红色表示推理成功但评测做错，橙色表示推理失败或异常且最终评测做错；点击行可以查看最终 attempt 的 JSON。长度条以 120k token 为满刻度，超过 120k 按满刻度显示。
 
 response 长度紧凑分布图用于几百条数据的总览。每条数据是一条细横线，不在页面上直接显示长度；把光标放在线上可以看到 id、req_id、长度和评测结果。
 

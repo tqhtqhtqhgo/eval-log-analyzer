@@ -157,6 +157,7 @@ def _retry_pie_counts(traces: list[ReqTrace], metrics: Metrics) -> tuple[int, in
         elif metrics.eval_results.get(trace.req_id) is True:
             pass_correct += 1
         else:
+            # 圆环图只按 export_data_list.json 的 eval_result 判定做对/做错。
             pass_wrong += 1
     return pass_correct, pass_wrong, failed
 
@@ -385,7 +386,7 @@ def _status_class(trace: ReqTrace, eval_result: bool | None) -> str:
         return "warn"
     if eval_result is False:
         return "bad"
-    return "ok" if trace.final_success else "bad"
+    return "unknown"
 
 
 def to_json_script(value: Any) -> str:
