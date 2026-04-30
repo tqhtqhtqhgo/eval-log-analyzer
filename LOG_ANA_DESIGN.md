@@ -67,7 +67,7 @@ attempt 成功必须同时满足：
 
 ## 指标统计规则
 
-export 侧统计总条数、通过数、通过率、`eval_result` 分布、平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry 条数、retry 成功条数、exception 条数和 exception 类型分布。异常摘要从 export 行的 `exception` / `exception_list` 文本统计：`Content OutOfMaxLength` 统计 exception 以该字符串开头的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数；`content_empty` 统计 response 中 `respMsg.content` 为空的条数。基础信息中的通过题数、通过率，以及页面中“做对/做错”的判断都以 `export_data_list.json` 每个对象的 `eval_result` 为准，支持字符串 `"True"` / `"False"` 以及同义大小写写法。
+export 侧统计总条数、通过数、通过率、`eval_result` 分布、平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry 条数、retry 成功条数、exception 条数和 exception 类型分布。异常摘要从 export 行的 `exception` / `exception_list` 文本统计：`Content OutOfMaxLength` 统计 exception 包含 `OutOfMaxLength` 的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数；`content_empty` 统计 response 中 `respMsg.content` 为空的条数。基础信息中的通过题数、通过率，以及页面中“做对/做错”的判断都以 `export_data_list.json` 每个对象的 `eval_result` 为准，支持字符串 `"True"` / `"False"` 以及同义大小写写法。
 
 核心指标中的 complete tokens、reasoning tokens、content tokens、used_time、total_used_time 同时计算箱线图数据，包含 count、min、q1、median、q3、max 和平均值。complete tokens、reasoning tokens、content tokens 额外计算过滤 0 后的箱线图，并在页面中以“tokens推理成功数据”展示。页面保留平均值展示，并用竖向箱线图补充展示全量数据分布，其中 q1/q3 分别作为 1/4 和 3/4 分位标记。complete/reasoning token 箱线图使用 0 到 120k 标尺，content tokens 和 content tokens 非零使用 0 到 64k 标尺，used_time 和 total_used_time 不设置固定 scale，按自身数据范围绘制。
 

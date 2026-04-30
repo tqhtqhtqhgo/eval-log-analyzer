@@ -225,7 +225,7 @@ def _exception_summary(
         {
             "type": "Content OutOfMaxLength",
             "count": export_summary["exception_categories"]["content_out_of_max_length"],
-            "description": "exception 以 Content OutOfMaxLength 开头",
+            "description": "exception 包含 OutOfMaxLength",
         },
         {
             "type": "timeout",
@@ -303,7 +303,7 @@ def _exception_categories(rows: list[dict[str, Any]]) -> dict[str, int]:
     }
     for row in rows:
         texts = _exception_texts(row)
-        if any(text.startswith("Content OutOfMaxLength") for text in texts):
+        if any("OutOfMaxLength" in text for text in texts):
             counter["content_out_of_max_length"] += 1
         if any(text.startswith("Streaming parse timeout") for text in texts):
             counter["streaming_parse_timeout"] += 1
