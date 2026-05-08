@@ -96,7 +96,7 @@ empty、overlength、timeout 文件当前仅保持读取兼容，不再进入核
 - 重试推理最终状态圆环图：基于重试推理表最终推理和 `export_data_list.json` 的 `eval_result` 统计，展示推理通过且做对、推理通过但做错、推理失败三类占比；推理失败使用黄色标注。
 - 过程异常摘要表：Content OutOfMaxLength、timeout、HTTP Connection 异常、content_empty、duplicate、parse_error。
 - 最终异常摘要表：只统计最终推理失败 attempt 的 Content OutOfMaxLength、timeout、HTTP Connection 异常和 content_empty。
-- 重试推理表：页面底部展示，每个 req_id 一行，按 user content 计算出的 sha256 前 32 位排序，并增加 `hash_id` 列；t1..tN 仅显示状态符号，不在主表展开 reasoning/content；表格使用紧凑行高和较小按钮；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看推理成功”按钮筛选最终推理成功的题，提供“只看推理失败”按钮筛选最终推理失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
+- 重试推理表：页面底部展示，每个 req_id 一行，按 user content 计算出的 sha256 前 32 位排序，并增加 `hash_id` 列；t1..tN 仅显示状态符号，不在主表展开 reasoning/content，颜色按 attempt 推理状态和 `export_data_list.json` 的评测结果组合判定：推理成功且做对为绿色，推理成功但做错为红色，推理失败为黄色；表格使用紧凑行高和较小按钮；提供“只看过程失败”按钮筛选最终失败和重试成功这类过程中出现失败的题，提供“只看做错”按钮筛选评测结果为做错的题，提供“只看推理成功”按钮筛选最终推理成功的题，提供“只看推理失败”按钮筛选最终推理失败的题；最后一列展示 `export_data_list.json` 中评测结果是做对还是做错。
 - response 长度点阵图：每个 req_id 对应一个点，x 轴按 120k 固定满刻度展示 response 长度，y 轴按稳定 hash 做轻微错位以减少重叠，图高为原始点阵图高度的 3 倍；推理失败点使用黄色；hover 显示 id、req_id、hash、长度和评测结果。点阵图下方排除最终推理失败样本，并按 `eval_result` 分别渲染做对题目和做错题目的 response 长度箱线图，展示 min、p25、p75、max 和总样本数。
 - JSON 弹窗：点击 attempt、最终结果或图表行时展示 request/response，超过 50KB 默认截断，可显示完整 JSON 和复制。
 

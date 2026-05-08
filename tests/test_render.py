@@ -87,6 +87,11 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "10k" in html
     assert "120k" in html
     assert "retry-table" in html
+    assert "status-square ok" in html
+    assert "status-square bad" in html
+    assert "status-square infer-fail" in html
+    assert "推理成功且做对" in html
+    assert "推理成功但做错" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
     assert "只看推理成功" in html

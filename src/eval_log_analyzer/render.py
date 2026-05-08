@@ -404,13 +404,14 @@ def _render_retry_table_content(
     rows = []
     for display_id, trace in enumerate(traces, start=1):
         attempt_cells = []
+        eval_result = metrics.eval_results.get(trace.req_id)
         for index in range(max_attempt_columns):
             attempt = trace.attempts[index] if index < len(trace.attempts) else None
             if attempt is None:
                 attempt_cells.append("<td></td>")
                 continue
-            status_class = "ok" if attempt.success else "bad"
-            label = "推理成功" if attempt.success else "推理失败"
+            status_class = _attempt_status_class(attempt.success, eval_result)
+            label = _attempt_status_label(attempt.success, eval_result)
             attempt_cells.append(
                 f"<td><button class=\"status-btn\" title=\"{label}\" aria-label=\"{label}\" "
                 f"onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index, attempt_prefix)}')\">"
@@ -421,7 +422,6 @@ def _render_retry_table_content(
         final_symbol = "推理通过" if trace.final_success else "推理失败"
         final_class = "final-ok" if trace.final_success else "final-bad"
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index, attempt_prefix) if trace.final_attempt else ""
-        eval_result = metrics.eval_results.get(trace.req_id)
         eval_text = _eval_text(eval_result)
         eval_class = _status_class(trace, eval_result)
         has_failure = any(not attempt.success for attempt in trace.attempts)
@@ -715,6 +715,24 @@ def _status_class(trace: ReqTrace, eval_result: bool | None) -> str:
     if eval_result is False:
         return "bad"
     return "unknown"
+
+
+def _attempt_status_class(success: bool, eval_result: bool | None) -> str:
+    if not success:
+        return "infer-fail"
+    if eval_result is False:
+        return "bad"
+    return "ok"
+
+
+def _attempt_status_label(success: bool, eval_result: bool | None) -> str:
+    if not success:
+        return "推理失败"
+    if eval_result is False:
+        return "推理成功但做错"
+    if eval_result is True:
+        return "推理成功且做对"
+    return "推理成功"
 
 
 def to_json_script(value: Any) -> str:
