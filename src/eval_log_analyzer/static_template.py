@@ -103,13 +103,16 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .boxplot-card.empty { display: flex; flex-direction: column; justify-content: center; }
 .compare-file-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .compare-file-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
-.compare-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
-.compare-column { min-width: 0; border-left: 1px solid var(--line); padding-left: 14px; }
-.compare-column:first-child { border-left: 0; padding-left: 0; }
-.compare-column .grid { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
-.compare-column .card { padding: 10px; min-height: 68px; }
-.compare-column .value { font-size: 16px; }
-.compare-column table { font-size: 12px; }
+.compare-section-stack { display: grid; gap: 18px; }
+.compare-section-row { margin-top: 28px; }
+.compare-section-row h2 { margin: 0 0 12px; }
+.compare-section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.compare-panel { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; display: flex; flex-direction: column; }
+.compare-panel h3 { margin: 0 0 10px; color: var(--muted); }
+.compare-panel .grid { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+.compare-panel .card { padding: 10px; min-height: 68px; }
+.compare-panel .value { font-size: 16px; }
+.compare-panel table { font-size: 12px; }
 .compare-boxplot-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fbfcfe; }
 .compare-metric-label { font-weight: 650; margin-bottom: 8px; }
 .compare-boxplot-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -141,8 +144,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .modal-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
 pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; max-height: 55vh; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 980px) {
-  .compare-file-row, .compare-columns, .compare-boxplot-pair { grid-template-columns: 1fr; }
-  .compare-column { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+  .compare-file-row, .compare-section-grid, .compare-boxplot-pair { grid-template-columns: 1fr; }
 }
 """
 

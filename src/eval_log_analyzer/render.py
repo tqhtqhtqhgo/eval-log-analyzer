@@ -71,24 +71,48 @@ def render_compare_html(
             "<h1>评测日志对比报告</h1>",
             f"<section><h2>对比文件</h2><div class=\"compare-file-row\">{_compare_file_card('文件 1', left_label)}{_compare_file_card('文件 2', right_label)}</div></section>",
             _render_compare_core_boxplots(left_metrics, right_metrics, left_label, right_label),
-            "<div class=\"compare-columns\">",
-            _render_compare_column(
-                "文件 1",
+            "<div class=\"compare-section-stack\">",
+            _render_compare_section_row(
+                "基础信息",
                 left_label,
-                left_metrics,
-                left_display_traces,
-                "left-",
-                "left::",
-                max_attempt_columns,
-            ),
-            _render_compare_column(
-                "文件 2",
                 right_label,
-                right_metrics,
-                right_display_traces,
-                "right-",
-                "right::",
-                max_attempt_columns,
+                _render_basic_info_content(left_metrics.basic_info),
+                _render_basic_info_content(right_metrics.basic_info),
+            ),
+            _render_compare_section_row(
+                "核心指标",
+                left_label,
+                right_label,
+                _render_core_cards_content(left_metrics),
+                _render_core_cards_content(right_metrics),
+            ),
+            _render_compare_section_row(
+                "重试推理最终状态圆环图",
+                left_label,
+                right_label,
+                _render_retry_pie_chart_content(left_display_traces, left_metrics),
+                _render_retry_pie_chart_content(right_display_traces, right_metrics),
+            ),
+            _render_compare_section_row(
+                "异常摘要",
+                left_label,
+                right_label,
+                _render_exception_summary_content(left_metrics.exception_summary),
+                _render_exception_summary_content(right_metrics.exception_summary),
+            ),
+            _render_compare_section_row(
+                "response 长度点阵图",
+                left_label,
+                right_label,
+                _render_response_beeswarm_chart_content(left_display_traces, left_metrics, "left::"),
+                _render_response_beeswarm_chart_content(right_display_traces, right_metrics, "right::"),
+            ),
+            _render_compare_section_row(
+                "重试推理表",
+                left_label,
+                right_label,
+                _render_retry_table_content(left_display_traces, left_metrics, max_attempt_columns, "left-", "left::"),
+                _render_retry_table_content(right_display_traces, right_metrics, max_attempt_columns, "right-", "right::"),
             ),
             "</div>",
             "</main>",
@@ -101,6 +125,10 @@ def render_compare_html(
 
 
 def _render_basic_info(info: dict[str, Any]) -> str:
+    return f"<section><h2>基础信息</h2>{_render_basic_info_content(info)}</section>"
+
+
+def _render_basic_info_content(info: dict[str, Any]) -> str:
     items = [
         ("评测模型", info.get("model")),
         ("用例集", info.get("dataset")),
@@ -112,35 +140,34 @@ def _render_basic_info(info: dict[str, Any]) -> str:
         ("log 文件名", info.get("log_name")),
         ("zip 文件名", info.get("zip_name")),
     ]
-    return "<section><h2>基础信息</h2><div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div></section>"
+    return "<div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div>"
 
 
 def _compare_file_card(label: str, value: str) -> str:
     return f"<div class=\"compare-file-card\"><div class=\"label\">{_escape(label)}</div><div class=\"value\">{_escape(value)}</div></div>"
 
 
-def _render_compare_column(
-    side_title: str,
-    file_label: str,
-    metrics: Metrics,
-    traces: list[ReqTrace],
-    dom_prefix: str,
-    attempt_prefix: str,
-    max_attempt_columns: int,
+def _render_compare_section_row(
+    section_title: str,
+    left_label: str,
+    right_label: str,
+    left_content: str,
+    right_content: str,
 ) -> str:
     return (
-        f"<article class=\"compare-column\"><h2>{_escape(side_title)}：{_escape(file_label)}</h2>"
-        f"{_render_basic_info(metrics.basic_info)}"
-        f"{_render_core_cards_without_boxplots(metrics)}"
-        f"{_render_retry_pie_chart(traces, metrics)}"
-        f"{_render_exception_summary(metrics.exception_summary)}"
-        f"{_render_response_beeswarm_chart(traces, metrics, attempt_prefix)}"
-        f"{_render_retry_table(traces, metrics, max_attempt_columns, dom_prefix, attempt_prefix)}"
-        "</article>"
+        f"<section class=\"compare-section-row\"><h2>{_escape(section_title)}</h2>"
+        "<div class=\"compare-section-grid\">"
+        f"<article class=\"compare-panel\"><h3>{_escape(left_label)}</h3>{left_content}</article>"
+        f"<article class=\"compare-panel\"><h3>{_escape(right_label)}</h3>{right_content}</article>"
+        "</div></section>"
     )
 
 
 def _render_core_cards_without_boxplots(metrics: Metrics) -> str:
+    return f"<section><h2>核心指标</h2>{_render_core_cards_content(metrics)}</section>"
+
+
+def _render_core_cards_content(metrics: Metrics) -> str:
     export = metrics.export_summary
     trace = metrics.trace_summary
     items = [
@@ -154,7 +181,7 @@ def _render_core_cards_without_boxplots(metrics: Metrics) -> str:
         ("最终推理失败数量", trace.get("final_failed_count")),
         ("推理成功题目数量（不含推理失败）", trace.get("final_success_count")),
     ]
-    return "<section><h2>核心指标</h2><div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div></section>"
+    return "<div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div>"
 
 
 def _render_core_cards(metrics: Metrics) -> str:
@@ -272,6 +299,13 @@ def _boxplot_row(title: str, items: list[tuple[str, Any]]) -> str:
 
 
 def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
+    content = _render_retry_pie_chart_content(traces, metrics)
+    if not content:
+        return ""
+    return f"<section><h2>重试推理最终状态圆环图</h2>{content}</section>"
+
+
+def _render_retry_pie_chart_content(traces: list[ReqTrace], metrics: Metrics) -> str:
     pass_correct, pass_wrong, failed = _retry_pie_counts(traces, metrics)
     total = pass_correct + pass_wrong + failed
     if total <= 0:
@@ -294,11 +328,10 @@ def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
         for klass, label, count in legend
     )
     return (
-        "<section><h2>重试推理最终状态圆环图</h2>"
         "<div class=\"pie-wrap\">"
         f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 推理通过且做对={pass_correct} 推理通过但做错={pass_wrong} 推理失败={failed}\"></div>"
         f"<div class=\"pie-legend\">{legend_html}</div>"
-        "</div></section>"
+        "</div>"
     )
 
 
@@ -318,17 +351,35 @@ def _retry_pie_counts(traces: list[ReqTrace], metrics: Metrics) -> tuple[int, in
 
 
 def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
+    return f"<section><h2>异常摘要</h2>{_render_exception_summary_content(rows)}</section>"
+
+
+def _render_exception_summary_content(rows: list[dict[str, Any]]) -> str:
     body = "".join(
         f"<tr><td>{_escape(row['type'])}</td><td>{_escape(row['count'])}</td><td>{_escape(row['description'])}</td></tr>"
         for row in rows
     )
     return (
-        "<section><h2>异常摘要</h2><table><thead><tr><th>类型</th><th>数量</th><th>说明</th></tr></thead>"
-        f"<tbody>{body}</tbody></table></section>"
+        "<table><thead><tr><th>类型</th><th>数量</th><th>说明</th></tr></thead>"
+        f"<tbody>{body}</tbody></table>"
     )
 
 
 def _render_retry_table(
+    traces: list[ReqTrace],
+    metrics: Metrics,
+    max_attempt_columns: int,
+    dom_prefix: str = "",
+    attempt_prefix: str = "",
+) -> str:
+    return (
+        "<section><h2>重试推理表</h2>"
+        f"{_render_retry_table_content(traces, metrics, max_attempt_columns, dom_prefix, attempt_prefix)}"
+        "</section>"
+    )
+
+
+def _render_retry_table_content(
     traces: list[ReqTrace],
     metrics: Metrics,
     max_attempt_columns: int,
@@ -376,17 +427,24 @@ def _render_retry_table(
             + f"<td><span class=\"result-pill {eval_class}\">{eval_text}</span></td></tr>"
         )
     return (
-        "<section><h2>重试推理表</h2>"
         f"<div class=\"toolbar\"><input id=\"{dom_prefix}retry-search\" type=\"search\" placeholder=\"搜索 req_id / hash_id / prompt / 失败原因\" oninput=\"elaFilterRetry('{dom_prefix}')\">"
         f"<button id=\"{dom_prefix}failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter('{dom_prefix}')\">只看过程失败</button>"
         f"<button id=\"{dom_prefix}eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter('{dom_prefix}')\">只看做错</button>"
         f"<button id=\"{dom_prefix}final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter('{dom_prefix}')\">只看推理成功</button>"
         f"<button id=\"{dom_prefix}final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter('{dom_prefix}')\">只看推理失败</button></div>"
-        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终推理</th><th>评测结果</th></tr></thead><tbody data-retry-scope=\"{dom_prefix}\">{''.join(rows)}</tbody></table></section>"
+        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终推理</th><th>评测结果</th></tr></thead><tbody data-retry-scope=\"{dom_prefix}\">{''.join(rows)}</tbody></table>"
     )
 
 
 def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics, attempt_prefix: str = "") -> str:
+    return (
+        "<section><h2>response 长度点阵图</h2>"
+        f"{_render_response_beeswarm_chart_content(traces, metrics, attempt_prefix)}"
+        "</section>"
+    )
+
+
+def _render_response_beeswarm_chart_content(traces: list[ReqTrace], metrics: Metrics, attempt_prefix: str = "") -> str:
     points = []
     column_counts: dict[float, int] = {}
     max_column_count = 0
@@ -408,10 +466,8 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics, at
         )
     chart_height = _beeswarm_chart_height(max_column_count)
     return (
-        "<section><h2>response 长度点阵图</h2>"
         f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\" style=\"height:{chart_height}px\">{''.join(points)}</div>"
         f"{_render_success_response_length_boxplots(traces, metrics)}"
-        "</section>"
     )
 
 

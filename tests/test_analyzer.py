@@ -47,7 +47,8 @@ def test_compare_analysis_html_generates_two_column_report(tmp_path: Path) -> No
     html = Path(output).read_text(encoding="utf-8")
 
     assert "评测日志对比报告" in html
-    assert "compare-columns" in html
+    assert "compare-section-grid" in html
+    assert "compare-panel" in html
     assert "AIME_left.zip" in html
     assert "AIME_right.zip" in html
     assert "核心指标箱线图对比" in html
