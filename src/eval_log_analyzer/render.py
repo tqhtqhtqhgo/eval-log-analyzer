@@ -70,7 +70,6 @@ def render_compare_html(
             "<main class=\"compare-main\">",
             "<h1>评测日志对比报告</h1>",
             f"<section><h2>对比文件</h2><div class=\"compare-file-row\">{_compare_file_card('文件 1', left_label)}{_compare_file_card('文件 2', right_label)}</div></section>",
-            _render_compare_core_boxplots(left_metrics, right_metrics, left_label, right_label),
             "<div class=\"compare-section-stack\">",
             _render_compare_section_row(
                 "基础信息",
@@ -86,6 +85,7 @@ def render_compare_html(
                 _render_core_cards_content(left_metrics),
                 _render_core_cards_content(right_metrics),
             ),
+            _render_compare_core_boxplots(left_metrics, right_metrics),
             _render_compare_section_row(
                 "重试推理最终状态圆环图",
                 left_label,
@@ -104,8 +104,15 @@ def render_compare_html(
                 "response 长度点阵图",
                 left_label,
                 right_label,
-                _render_response_beeswarm_chart_content(left_display_traces, left_metrics, "left::"),
-                _render_response_beeswarm_chart_content(right_display_traces, right_metrics, "right::"),
+                _render_response_beeswarm_chart_content(left_display_traces, left_metrics, "left::", False),
+                _render_response_beeswarm_chart_content(right_display_traces, right_metrics, "right::", False),
+            ),
+            _render_compare_section_row(
+                "不含推理失败题目的 response 长度箱线图",
+                left_label,
+                right_label,
+                _render_success_response_length_boxplots(left_display_traces, left_metrics, False),
+                _render_success_response_length_boxplots(right_display_traces, right_metrics, False),
             ),
             _render_compare_section_row(
                 "重试推理表",
@@ -231,8 +238,6 @@ def _render_core_boxplots(boxplots: dict[str, Any]) -> str:
 def _render_compare_core_boxplots(
     left_metrics: Metrics,
     right_metrics: Metrics,
-    left_label: str,
-    right_label: str,
 ) -> str:
     left_boxplots = left_metrics.export_summary.get("boxplots") or {}
     right_boxplots = right_metrics.export_summary.get("boxplots") or {}
@@ -248,14 +253,12 @@ def _render_compare_core_boxplots(
         ("reasoning tokens 非零", "reasoning_token_nonzero"),
         ("content tokens 非零", "content_token_nonzero"),
     ]
-    all_rows = _compare_boxplot_rows("全部数据", all_items, left_boxplots, right_boxplots, left_label, right_label)
+    all_rows = _compare_boxplot_rows("全部数据", all_items, left_boxplots, right_boxplots)
     nonzero_rows = _compare_boxplot_rows(
         "tokens推理成功数据",
         nonzero_items,
         left_boxplots,
         right_boxplots,
-        left_label,
-        right_label,
     )
     if not all_rows and not nonzero_rows:
         return ""
@@ -267,8 +270,6 @@ def _compare_boxplot_rows(
     items: list[tuple[str, str]],
     left_boxplots: dict[str, Any],
     right_boxplots: dict[str, Any],
-    left_label: str,
-    right_label: str,
 ) -> str:
     rows = []
     for metric_label, key in items:
@@ -276,15 +277,20 @@ def _compare_boxplot_rows(
         right_boxplot = right_boxplots.get(key)
         if not left_boxplot and not right_boxplot:
             continue
-        left_card = _boxplot_card(f"{left_label} · {metric_label}", left_boxplot) if left_boxplot else _empty_boxplot_card(left_label)
-        right_card = _boxplot_card(f"{right_label} · {metric_label}", right_boxplot) if right_boxplot else _empty_boxplot_card(right_label)
+        left_card = _compare_boxplot_card("文件 1", metric_label, left_boxplot) if left_boxplot else _empty_boxplot_card("文件 1")
+        right_card = _compare_boxplot_card("文件 2", metric_label, right_boxplot) if right_boxplot else _empty_boxplot_card("文件 2")
         rows.append(
             f"<div class=\"compare-boxplot-row\"><div class=\"compare-metric-label\">{_escape(metric_label)}</div>"
             f"<div class=\"compare-boxplot-pair\">{left_card}{right_card}</div></div>"
         )
     if not rows:
         return ""
-    return f"<div class=\"boxplot-row-title\">{_escape(title)}</div>{''.join(rows)}"
+    return f"<div class=\"boxplot-row-title\">{_escape(title)}</div><div class=\"compare-boxplot-grid\">{''.join(rows)}</div>"
+
+
+def _compare_boxplot_card(display_label: str, metric_label: str, boxplot: dict[str, Any]) -> str:
+    chart = _boxplot_html(metric_label, boxplot)
+    return f"<div class=\"boxplot-card\"><div class=\"label\">{_escape(display_label)}</div>{chart}</div>"
 
 
 def _empty_boxplot_card(label: str) -> str:
@@ -444,7 +450,12 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics, at
     )
 
 
-def _render_response_beeswarm_chart_content(traces: list[ReqTrace], metrics: Metrics, attempt_prefix: str = "") -> str:
+def _render_response_beeswarm_chart_content(
+    traces: list[ReqTrace],
+    metrics: Metrics,
+    attempt_prefix: str = "",
+    include_success_boxplots: bool = True,
+) -> str:
     points = []
     column_counts: dict[float, int] = {}
     max_column_count = 0
@@ -465,13 +476,18 @@ def _render_response_beeswarm_chart_content(traces: list[ReqTrace], metrics: Met
             f"title=\"{_escape(title)}\" onclick=\"elaOpenAttempt('{final_id}')\"></button>"
         )
     chart_height = _beeswarm_chart_height(max_column_count)
+    boxplots = _render_success_response_length_boxplots(traces, metrics) if include_success_boxplots else ""
     return (
         f"{_render_length_scale('beeswarm')}<div class=\"beeswarm-chart\" style=\"height:{chart_height}px\">{''.join(points)}</div>"
-        f"{_render_success_response_length_boxplots(traces, metrics)}"
+        f"{boxplots}"
     )
 
 
-def _render_success_response_length_boxplots(traces: list[ReqTrace], metrics: Metrics) -> str:
+def _render_success_response_length_boxplots(
+    traces: list[ReqTrace],
+    metrics: Metrics,
+    include_title: bool = True,
+) -> str:
     correct_lengths: list[int] = []
     wrong_lengths: list[int] = []
     for trace in traces:
@@ -497,11 +513,13 @@ def _render_success_response_length_boxplots(traces: list[ReqTrace], metrics: Me
     if not charts:
         return ""
     sample_count = len(correct_lengths) + len(wrong_lengths)
-    return (
+    title = (
         "<div class=\"boxplot-row-title\">不含推理失败题目的 response 长度箱线图"
         f"<span class=\"sample-count\">总样本数 {sample_count}</span></div>"
-        f"<div class=\"boxplot-grid response-boxplot-grid\">{charts}</div>"
+        if include_title
+        else f"<div class=\"boxplot-row-title\">总样本数 {sample_count}</div>"
     )
+    return f"{title}<div class=\"boxplot-grid response-boxplot-grid\">{charts}</div>"
 
 
 def _render_length_scale(kind: str) -> str:

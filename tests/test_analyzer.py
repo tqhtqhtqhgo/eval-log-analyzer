@@ -52,13 +52,14 @@ def test_compare_analysis_html_generates_two_column_report(tmp_path: Path) -> No
     assert "AIME_left.zip" in html
     assert "AIME_right.zip" in html
     assert "核心指标箱线图对比" in html
+    assert html.find("核心指标") < html.find("核心指标箱线图对比")
+    assert "compare-boxplot-grid" in html
     assert "compare-boxplot-pair" in html
-    assert "AIME_left.zip · complete tokens" in html
-    assert "AIME_right.zip · complete tokens" in html
-    assert "AIME_left.zip · content tokens" in html
-    assert "AIME_right.zip · content tokens" in html
-    assert "AIME_left.zip · used_time" in html
-    assert "AIME_right.zip · total_used_time" in html
+    assert "文件 1</div><div class=\"boxplot\"" in html
+    assert "文件 2</div><div class=\"boxplot\"" in html
+    assert "AIME_left.zip · complete tokens" not in html
+    assert "AIME_right.zip · complete tokens" not in html
+    assert html.rfind("不含推理失败题目的 response 长度箱线图") > html.rfind("response 长度点阵图")
     assert "scale 64k" in html
     assert "scale 5400" in html
     assert "id=\"left-retry-search\"" in html
