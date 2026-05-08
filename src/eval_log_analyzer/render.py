@@ -177,9 +177,12 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
             if attempt is None:
                 attempt_cells.append("<td></td>")
                 continue
-            symbol = "🟩" if attempt.success else "🟨"
+            status_class = "ok" if attempt.success else "infer-fail"
+            label = "推理成功" if attempt.success else "推理失败"
             attempt_cells.append(
-                f"<td><button class=\"status-btn\" onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index)}')\">{symbol}</button></td>"
+                f"<td><button class=\"status-btn\" title=\"{label}\" aria-label=\"{label}\" "
+                f"onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index)}')\">"
+                f"<span class=\"status-square {status_class}\"></span></button></td>"
             )
         if len(trace.attempts) > max_attempt_columns:
             attempt_cells[-1] = f"<td><button onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, trace.attempts[-1].attempt_index)}')\">更多</button></td>"

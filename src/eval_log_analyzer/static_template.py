@@ -37,7 +37,10 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .retry-table { font-size: 13px; }
 .retry-table th, .retry-table td { padding: 3px 6px; vertical-align: middle; }
 .retry-table button { padding: 2px 6px; border-radius: 4px; font-size: 12px; line-height: 1.2; }
-.status-btn { min-width: 24px; font-size: 13px; line-height: 1; }
+.status-btn { min-width: 24px; height: 20px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.status-square { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid rgba(23, 32, 51, .12); }
+.status-square.ok { background: var(--ok); }
+.status-square.infer-fail { background: var(--infer-fail); }
 .final-ok { color: var(--ok); font-weight: 700; }
 .final-bad, .failure { color: var(--infer-fail); font-weight: 700; }
 .result-pill { display: inline-flex; min-width: 38px; justify-content: center; border-radius: 999px; padding: 1px 6px; font-size: 12px; font-weight: 650; border: 1px solid currentColor; }
