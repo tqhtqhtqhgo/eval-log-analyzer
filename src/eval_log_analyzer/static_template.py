@@ -18,7 +18,7 @@ BASE_CSS = """
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #ffffff; }
 main { max-width: 1240px; margin: 0 auto; padding: 24px; }
-main.compare-main { max-width: 1680px; }
+main.compare-main { width: 80vw; max-width: 2200px; }
 h1 { margin: 0 0 18px; font-size: 28px; }
 h2 { margin: 28px 0 12px; font-size: 20px; }
 h3 { margin: 20px 0 10px; font-size: 16px; }
@@ -145,6 +145,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .modal-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
 pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; max-height: 55vh; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 980px) {
+  main.compare-main { width: auto; }
   .compare-file-row, .compare-section-grid, .compare-boxplot-grid, .compare-boxplot-pair { grid-template-columns: 1fr; }
 }
 """
