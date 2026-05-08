@@ -590,7 +590,7 @@ def _boxplot_scale(label: str, boxplot: dict[str, Any]) -> tuple[float, str]:
     if normalized_label.endswith("content tokens") or normalized_label.endswith("content tokens 非零"):
         return 64000.0, "64k"
     if normalized_label.endswith("used_time") or normalized_label.endswith("total_used_time"):
-        return 3600.0, "3600"
+        return 5400.0, "5400"
     return 120000.0, "120k"
 
 

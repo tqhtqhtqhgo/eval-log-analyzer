@@ -60,7 +60,7 @@ def test_compare_analysis_html_generates_two_column_report(tmp_path: Path) -> No
     assert "AIME_left.zip · used_time" in html
     assert "AIME_right.zip · total_used_time" in html
     assert "scale 64k" in html
-    assert "scale 3600" in html
+    assert "scale 5400" in html
     assert "id=\"left-retry-search\"" in html
     assert "id=\"right-retry-search\"" in html
     assert "left::r_success" in html
