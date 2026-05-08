@@ -118,6 +118,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "boxplot-card" in html
     assert "scale 120k" in html
     assert "scale 64k" in html
+    assert "scale 3600" in html
     assert "平均 total_used_time" in html
     assert "min" in html
     assert "max" in html

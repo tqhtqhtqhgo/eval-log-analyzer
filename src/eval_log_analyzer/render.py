@@ -586,11 +586,11 @@ def _boxplot_html(label: str, boxplot: dict[str, Any]) -> str:
 
 
 def _boxplot_scale(label: str, boxplot: dict[str, Any]) -> tuple[float, str]:
-    if label in {"content tokens", "content tokens 非零"}:
+    normalized_label = label.strip()
+    if normalized_label.endswith("content tokens") or normalized_label.endswith("content tokens 非零"):
         return 64000.0, "64k"
-    if label in {"used_time", "total_used_time"}:
-        maximum = float(boxplot.get("max") or 0)
-        return (maximum if maximum > 0 else 1.0), ""
+    if normalized_label.endswith("used_time") or normalized_label.endswith("total_used_time"):
+        return 3600.0, "3600"
     return 120000.0, "120k"
 
 
