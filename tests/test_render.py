@@ -61,20 +61,20 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "评测日志分析报告" in html
     assert "m1" in html
     assert "异常摘要" in html
-    assert "重试链路表" in html
-    assert "重试链路最终状态圆环图" in html
+    assert "重试推理表" in html
+    assert "重试推理最终状态圆环图" in html
     assert "pie-chart" in html
-    assert "链路通过且做对" in html
-    assert "链路通过但做错" in html
-    assert "链路失败" in html
+    assert "推理通过且做对" in html
+    assert "推理通过但做错" in html
+    assert "推理失败" in html
     assert "通过且做对=1" in html
     assert "通过但做错=1" in html
-    assert "链路失败=1" in html
+    assert "推理失败=1" in html
     assert "response 长度紧凑分布图" not in html
     assert "response 长度点阵图" in html
     assert "beeswarm-chart" in html
     assert "beeswarm-point" in html
-    assert "beeswarm-point warn" in html
+    assert "beeswarm-point infer-fail" in html
     assert "left:2.4%;top:12px" in html
     assert "height:384px" in html
     assert "hash=" in html
@@ -88,8 +88,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "retry-table" in html
     assert "只看过程失败" in html
     assert "只看做错" in html
-    assert "只看链路成功" in html
-    assert "只看链路失败" in html
+    assert "只看推理成功" in html
+    assert "只看推理失败" in html
     assert "评测结果" in html
     assert "<th>hash_id</th>" in html
     assert "搜索 req_id / hash_id / prompt / 失败原因" in html
@@ -101,8 +101,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "data-final-failed=\"false\"" in html
     assert "做对" in html
     assert "做错" in html
-    assert "最终链路失败数量" in html
-    assert "推理成功题目数量（不含链路失败）" in html
+    assert "最终推理失败数量" in html
+    assert "推理成功题目数量（不含推理失败）" in html
     assert "最终失败 content 为空" not in html
     assert "boxplot" in html
     assert "核心指标箱线图" in html
@@ -132,7 +132,7 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
     assert "hash_id 重复评测聚合图" not in html
     assert "hash-repeat-row" not in html
     assert "hash-repeat-value" not in html
-    assert html.rfind("重试链路表") > html.rfind("response 长度点阵图")
+    assert html.rfind("重试推理表") > html.rfind("response 长度点阵图")
     assert "export_exception" not in html
     assert "content_empty" in html
     assert "f64551fcd6f07823cb87971cfb914464" in html

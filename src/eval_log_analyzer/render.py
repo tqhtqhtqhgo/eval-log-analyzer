@@ -71,8 +71,8 @@ def _render_core_cards(metrics: Metrics) -> str:
         ("平均 total_used_time", export.get("avg_total_used_time")),
         ("retry req_id 数量", trace.get("retry_req_id_count")),
         ("retry 最终成功数量", trace.get("retry_final_success_count")),
-        ("最终链路失败数量", trace.get("final_failed_count")),
-        ("推理成功题目数量（不含链路失败）", trace.get("final_success_count")),
+        ("最终推理失败数量", trace.get("final_failed_count")),
+        ("推理成功题目数量（不含推理失败）", trace.get("final_success_count")),
     ]
     return (
         "<section><h2>核心指标</h2><div class=\"grid\">"
@@ -121,21 +121,21 @@ def _render_retry_pie_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
         "background:conic-gradient("
         f"var(--ok) 0deg {pass_correct_deg}deg,"
         f"var(--warn) {pass_correct_deg}deg {pass_correct_deg + pass_wrong_deg}deg,"
-        f"var(--bad) {pass_correct_deg + pass_wrong_deg}deg 360deg)"
+        f"var(--infer-fail) {pass_correct_deg + pass_wrong_deg}deg 360deg)"
     )
     legend = [
-        ("ok", "链路通过且做对", pass_correct),
-        ("warn", "链路通过但做错", pass_wrong),
-        ("bad", "链路失败", failed),
+        ("ok", "推理通过且做对", pass_correct),
+        ("warn", "推理通过但做错", pass_wrong),
+        ("infer-fail", "推理失败", failed),
     ]
     legend_html = "".join(
         f"<div class=\"pie-legend-item\"><span class=\"legend-dot {klass}\"></span>{label}<b>{count}</b></div>"
         for klass, label, count in legend
     )
     return (
-        "<section><h2>重试链路最终状态圆环图</h2>"
+        "<section><h2>重试推理最终状态圆环图</h2>"
         "<div class=\"pie-wrap\">"
-        f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 通过且做对={pass_correct} 通过但做错={pass_wrong} 链路失败={failed}\"></div>"
+        f"<div class=\"pie-chart\" style=\"{style}\" title=\"总数={total} 推理通过且做对={pass_correct} 推理通过但做错={pass_wrong} 推理失败={failed}\"></div>"
         f"<div class=\"pie-legend\">{legend_html}</div>"
         "</div></section>"
     )
@@ -177,13 +177,13 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
             if attempt is None:
                 attempt_cells.append("<td></td>")
                 continue
-            symbol = "🟩" if attempt.success else "🟥"
+            symbol = "🟩" if attempt.success else "🟨"
             attempt_cells.append(
                 f"<td><button class=\"status-btn\" onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index)}')\">{symbol}</button></td>"
             )
         if len(trace.attempts) > max_attempt_columns:
             attempt_cells[-1] = f"<td><button onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, trace.attempts[-1].attempt_index)}')\">更多</button></td>"
-        final_symbol = "通过" if trace.final_success else "失败"
+        final_symbol = "推理通过" if trace.final_success else "推理失败"
         final_class = "final-ok" if trace.final_success else "final-bad"
         final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
         eval_result = metrics.eval_results.get(trace.req_id)
@@ -206,13 +206,13 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
             + f"<td><span class=\"result-pill {eval_class}\">{eval_text}</span></td></tr>"
         )
     return (
-        "<section><h2>重试链路表</h2>"
+        "<section><h2>重试推理表</h2>"
         "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / hash_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
         "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
         "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button>"
-        "<button id=\"final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter()\">只看链路成功</button>"
-        "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看链路失败</button></div>"
-        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终链路</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+        "<button id=\"final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter()\">只看推理成功</button>"
+        "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看推理失败</button></div>"
+        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终推理</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
     )
 
 
@@ -249,7 +249,7 @@ def _render_success_response_length_boxplots(traces: list[ReqTrace], metrics: Me
     correct_lengths: list[int] = []
     wrong_lengths: list[int] = []
     for trace in traces:
-        # 只统计最终链路成功的题，避免推理失败样本影响做对/做错 response 长度分布。
+        # 只统计最终推理成功的题，避免推理失败样本影响做对/做错 response 长度分布。
         if not trace.final_success:
             continue
         eval_result = metrics.eval_results.get(trace.req_id)
@@ -442,7 +442,7 @@ def _beeswarm_chart_height(max_column_count: int) -> int:
 def _beeswarm_left(length: int) -> float:
     width = _fixed_width(length)
     if width <= 0:
-        # 失败链路通常长度为 0；保持在同一列，同时避免贴边裁剪。
+        # 推理失败通常长度为 0；保持在同一列，同时避免贴边裁剪。
         return 2.4
     return round(2 + width * 0.97, 3)
 
@@ -456,10 +456,10 @@ def _eval_text(value: bool | None) -> str:
 
 
 def _status_class(trace: ReqTrace, eval_result: bool | None) -> str:
+    if not trace.final_success:
+        return "infer-fail"
     if eval_result is True:
         return "ok"
-    if eval_result is False and not trace.final_success:
-        return "warn"
     if eval_result is False:
         return "bad"
     return "unknown"
