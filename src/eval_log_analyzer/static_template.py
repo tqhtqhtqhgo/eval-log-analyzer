@@ -40,6 +40,7 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .status-btn { min-width: 24px; height: 20px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .status-square { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid rgba(23, 32, 51, .12); }
 .status-square.ok { background: var(--ok); }
+.status-square.bad { background: var(--bad); }
 .status-square.infer-fail { background: var(--infer-fail); }
 .final-ok { color: var(--ok); font-weight: 700; }
 .final-bad, .failure { color: var(--infer-fail); font-weight: 700; }

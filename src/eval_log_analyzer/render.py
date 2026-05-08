@@ -177,7 +177,7 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
             if attempt is None:
                 attempt_cells.append("<td></td>")
                 continue
-            status_class = "ok" if attempt.success else "infer-fail"
+            status_class = "ok" if attempt.success else "bad"
             label = "推理成功" if attempt.success else "推理失败"
             attempt_cells.append(
                 f"<td><button class=\"status-btn\" title=\"{label}\" aria-label=\"{label}\" "
