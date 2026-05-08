@@ -18,6 +18,7 @@ class Metrics:
     export_summary: dict[str, Any]
     trace_summary: dict[str, Any]
     exception_summary: list[dict[str, Any]]
+    final_exception_summary: list[dict[str, Any]]
     hash_repeat_groups: list[dict[str, Any]]
     eval_results: dict[str, bool | None]
 
@@ -44,12 +45,14 @@ def calculate_metrics(
     optional_summary = _optional_file_summary(duplicate_result)
     basic_info = _basic_info(xlsx_rows or [], export_rows, export_summary, log_name, zip_name)
     exception_summary = _exception_summary(export_summary, trace_summary, optional_summary)
+    final_exception_summary = _final_exception_summary(req_traces)
     hash_repeat_groups = build_hash_repeat_groups(req_traces, export_rows, repeat_group_size)
     return Metrics(
         basic_info=basic_info,
         export_summary={**export_summary, **optional_summary},
         trace_summary=trace_summary,
         exception_summary=exception_summary,
+        final_exception_summary=final_exception_summary,
         hash_repeat_groups=hash_repeat_groups,
         eval_results=eval_results,
     )
@@ -253,6 +256,51 @@ def _exception_summary(
     ]
 
 
+def _final_exception_summary(traces: list[ReqTrace]) -> list[dict[str, Any]]:
+    """只统计最终推理失败 attempt 的异常因素。"""
+    category_counter = {
+        "content_out_of_max_length": 0,
+        "streaming_parse_timeout": 0,
+        "http_connection": 0,
+    }
+    content_empty_count = 0
+    for trace in traces:
+        if trace.final_success or trace.final_attempt is None:
+            continue
+        attempt = trace.final_attempt
+        texts = _attempt_exception_texts(attempt)
+        if any("OutOfMaxLength" in text for text in texts):
+            category_counter["content_out_of_max_length"] += 1
+        if any(text.startswith("Streaming parse timeout") for text in texts):
+            category_counter["streaming_parse_timeout"] += 1
+        if any("HTTPConnection" in text for text in texts):
+            category_counter["http_connection"] += 1
+        if attempt.failure_reason == "content_empty" or _is_response_content_empty(attempt.response_json):
+            content_empty_count += 1
+    return [
+        {
+            "type": "Content OutOfMaxLength",
+            "count": category_counter["content_out_of_max_length"],
+            "description": "最终失败 attempt 的 exception/output_reason 包含 OutOfMaxLength",
+        },
+        {
+            "type": "timeout",
+            "count": category_counter["streaming_parse_timeout"],
+            "description": "最终失败 attempt 的 exception/output_reason 以 Streaming parse timeout 开头",
+        },
+        {
+            "type": "HTTP Connection 异常",
+            "count": category_counter["http_connection"],
+            "description": "最终失败 attempt 的 exception/output_reason 包含 HTTPConnection",
+        },
+        {
+            "type": "content_empty",
+            "count": content_empty_count,
+            "description": "最终失败 attempt 的 response.respMsg.content 为空",
+        },
+    ]
+
+
 def _normalize_eval(value: Any) -> str:
     if value is True:
         return "PASS"
@@ -320,6 +368,18 @@ def _exception_texts(row: dict[str, Any]) -> list[str]:
     exception_list = row.get("exception_list")
     if isinstance(exception_list, list):
         texts.extend(str(item) for item in exception_list if item)
+    return texts
+
+
+def _attempt_exception_texts(attempt: Any) -> list[str]:
+    texts: list[str] = []
+    response = attempt.response_json or {}
+    for key in ("exception", "output_reason"):
+        value = response.get(key)
+        if value:
+            texts.append(str(value))
+    if attempt.failure_reason:
+        texts.append(str(attempt.failure_reason))
     return texts
 
 

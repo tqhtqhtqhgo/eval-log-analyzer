@@ -66,3 +66,5 @@ def test_compare_analysis_html_generates_two_column_report(tmp_path: Path) -> No
     assert "id=\"right-retry-search\"" in html
     assert "left::r_success" in html
     assert "right::r_success" in html
+    assert "过程异常摘要" in html
+    assert "最终异常摘要" in html

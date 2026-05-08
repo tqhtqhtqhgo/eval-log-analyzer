@@ -78,7 +78,7 @@ print(compare_html_path)
 
 核心指标区展示平均 complete/reasoning/content tokens、平均 used_time、平均 total_used_time、retry req_id 数量、retry 最终成功数量、最终推理失败数量和推理成功题目数量（不含推理失败）。complete/reasoning/content tokens、used_time 和 total_used_time 会保留平均值，并在核心指标下方单独展示竖向箱线图，标出 min、1/4 分位、3/4 分位、中位数和 max。complete/reasoning/content tokens 还会额外在“tokens推理成功数据”中展示过滤 0 后的箱线图，便于查看有效 token 数据分布。content tokens 和 content tokens 非零使用 0 到 64k 标尺，used_time 和 total_used_time 使用 0 到 5400 标尺。
 
-异常摘要区从 `export_data_list.json` 的 `exception` / `exception_list` 文本统计关键异常：`Content OutOfMaxLength` 统计 exception 包含 `OutOfMaxLength` 的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数；`content_empty` 统计 response 中 `respMsg.content` 为空的条数。empty、overlength、timeout 文件当前不再进入核心指标或异常摘要。
+过程异常摘要区从 `export_data_list.json` 的 `exception` / `exception_list` 文本统计关键异常：`Content OutOfMaxLength` 统计 exception 包含 `OutOfMaxLength` 的条数；`timeout` 统计 exception 以 `Streaming parse timeout` 开头的条数；`HTTP Connection 异常` 统计 exception 包含 `HTTPConnection` 的条数；`content_empty` 统计所有 attempt 中 response 的 `respMsg.content` 为空的条数。最终异常摘要区只统计最终推理结果中那次失败 attempt 的异常因素，异常文本检查方式与过程异常摘要一致，并单独统计最终失败 attempt 的 `content_empty`。empty、overlength、timeout 文件当前不再进入核心指标或过程异常摘要。
 
 重试推理最终状态圆环图根据重试推理表的最终推理和 `export_data_list.json` 的 `eval_result` 绘制，分为推理通过且做对、推理通过但做错、推理失败三类，其中推理失败使用黄色标注。
 
@@ -88,7 +88,7 @@ print(compare_html_path)
 
 response 长度点阵图中每道题是一个点，x 轴是 response 长度，y 轴按稳定 hash 做轻微错位以减少重叠，图高为原始点阵图高度的 3 倍。推理失败点显示为黄色。把光标放在点上可以看到 id、req_id、hash、长度和评测结果，点击点可以查看最终 attempt 的 JSON。点阵图下方会排除推理失败题目，再分别展示做对题目和做错题目的 response 长度箱线图，并显示这两个图的总样本数。
 
-对比报告顶部展示两个 zip 文件名，并先展示基础信息和核心指标卡片。核心指标箱线图按指标卡片网格展示，每个指标卡片中左侧是文件 1、右侧是文件 2，例如 complete tokens 会在同一个小卡片内左右并排比较。下方主体区域按模块分行对齐：重试推理最终状态圆环图、异常摘要、response 长度点阵图、不含推理失败题目的 response 长度箱线图和重试推理表都会各自形成一行，每行左侧是文件 1，右侧是文件 2，同一模块左右两格保持等高。两列的重试表筛选互不影响，点击任一列的状态点仍会打开对应 attempt 的 JSON 弹窗。
+对比报告顶部展示两个 zip 文件名，并先展示基础信息和核心指标卡片。核心指标箱线图按指标卡片网格展示，每个指标卡片中左侧是文件 1、右侧是文件 2，例如 complete tokens 会在同一个小卡片内左右并排比较。下方主体区域按模块分行对齐：重试推理最终状态圆环图、过程异常摘要、最终异常摘要、response 长度点阵图、不含推理失败题目的 response 长度箱线图和重试推理表都会各自形成一行，每行左侧是文件 1，右侧是文件 2，同一模块左右两格保持等高。两列的重试表筛选互不影响，点击任一列的状态点仍会打开对应 attempt 的 JSON 弹窗。
 
 `analysis_html(..., enable_hash_repeat_chart=True)` 参数当前保留兼容，但页面不再显示 hash_id 聚合紧凑分布图和 hash_id 聚合图。
 

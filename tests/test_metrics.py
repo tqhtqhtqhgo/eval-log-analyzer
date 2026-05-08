@@ -62,6 +62,8 @@ def test_calculate_export_and_trace_metrics() -> None:
     assert all(row["type"] != "empty_result" for row in metrics.exception_summary)
     assert all(row["type"] != "overlength_result" for row in metrics.exception_summary)
     assert any(row["type"] == "content_empty" and row["count"] == 1 for row in metrics.exception_summary)
+    assert any(row["type"] == "Content OutOfMaxLength" and row["count"] == 0 for row in metrics.final_exception_summary)
+    assert any(row["type"] == "content_empty" and row["count"] == 1 for row in metrics.final_exception_summary)
     assert all(row["type"] != "export_exception" for row in metrics.exception_summary)
     assert metrics.basic_info["model"] == "m"
 

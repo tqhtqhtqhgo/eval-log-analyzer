@@ -32,7 +32,8 @@ def render_html(
             _render_basic_info(metrics.basic_info),
             _render_core_cards(metrics),
             _render_retry_pie_chart(display_traces, metrics),
-            _render_exception_summary(metrics.exception_summary),
+            _render_exception_summary("过程异常摘要", metrics.exception_summary),
+            _render_exception_summary("最终异常摘要", metrics.final_exception_summary),
             _render_response_beeswarm_chart(display_traces, metrics),
             _render_retry_table(display_traces, metrics, max_attempt_columns),
             "</main>",
@@ -94,11 +95,18 @@ def render_compare_html(
                 _render_retry_pie_chart_content(right_display_traces, right_metrics),
             ),
             _render_compare_section_row(
-                "异常摘要",
+                "过程异常摘要",
                 left_label,
                 right_label,
                 _render_exception_summary_content(left_metrics.exception_summary),
                 _render_exception_summary_content(right_metrics.exception_summary),
+            ),
+            _render_compare_section_row(
+                "最终异常摘要",
+                left_label,
+                right_label,
+                _render_exception_summary_content(left_metrics.final_exception_summary),
+                _render_exception_summary_content(right_metrics.final_exception_summary),
             ),
             _render_compare_section_row(
                 "response 长度点阵图",
@@ -356,8 +364,8 @@ def _retry_pie_counts(traces: list[ReqTrace], metrics: Metrics) -> tuple[int, in
     return pass_correct, pass_wrong, failed
 
 
-def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
-    return f"<section><h2>异常摘要</h2>{_render_exception_summary_content(rows)}</section>"
+def _render_exception_summary(title: str, rows: list[dict[str, Any]]) -> str:
+    return f"<section><h2>{_escape(title)}</h2>{_render_exception_summary_content(rows)}</section>"
 
 
 def _render_exception_summary_content(rows: list[dict[str, Any]]) -> str:

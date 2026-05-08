@@ -60,7 +60,8 @@ def test_render_basic_html_without_remote_assets(tmp_path: Path) -> None:
 
     assert "评测日志分析报告" in html
     assert "m1" in html
-    assert "异常摘要" in html
+    assert "过程异常摘要" in html
+    assert "最终异常摘要" in html
     assert "重试推理表" in html
     assert "重试推理最终状态圆环图" in html
     assert "pie-chart" in html
