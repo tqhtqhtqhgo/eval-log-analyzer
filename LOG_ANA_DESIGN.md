@@ -2,11 +2,11 @@
 
 ## 项目目标
 
-本项目读取评测日志 zip 压缩包，生成一个单文件静态 HTML 报告。报告用于查看评测基础信息、通过率、token 和耗时统计、retry 链路、最终成功/失败，以及 response 长度分布。
+本项目读取评测日志 zip 压缩包，生成单文件静态 HTML 报告。报告用于查看评测基础信息、通过率、token 和耗时统计、retry 链路、最终成功/失败，以及 response 长度分布；也支持读取两个同评测名前缀的 zip，生成双列对比报告。
 
 ## 模块架构
 
-- `analyzer.py`：对外入口，校验输入并串联 loader、parser、metrics、render。
+- `analyzer.py`：对外入口，校验输入并串联 loader、parser、metrics、render；提供单文件报告和双文件对比报告入口。
 - `loader.py`：直接从 zip 内发现关键文件，读取 log、JSON 和 xlsx。
 - `parser.py`：解析 log，构建 `ReqTrace` 和 `Attempt`。
 - `metrics.py`：计算 export 指标、trace 指标、异常摘要和 hash_id 聚合。
@@ -16,6 +16,8 @@
 ## 数据流
 
 `analysis_html(zip_path)` 校验 zip 路径后调用 `load_eval_zip`。loader 不落盘解压，直接从 zip 内读取必选 `.log` 和可选 json/xlsx 文件，避免长路径问题。parser 消费 log 文本生成 trace；metrics 消费 trace、export、异常文件生成统计；render 将统计和 trace 写入单个 HTML。
+
+`compare_analysis_html(left_zip_path, right_zip_path)` 会先校验两个 zip 文件名第一个下划线前的评测名前缀一致，再分别复用单文件的数据加载、解析和指标计算流程，最后把两份 metrics/traces 传给对比渲染入口生成一个单文件 HTML。
 
 ## 文件发现和读取规则
 
@@ -98,6 +100,14 @@ empty、overlength、timeout 文件当前仅保持读取兼容，不再进入核
 - JSON 弹窗：点击 attempt、最终结果或图表行时展示 request/response，超过 50KB 默认截断，可显示完整 JSON 和复制。
 
 response 长度图使用固定 120k token 作为满刻度，不再按当前报告最大值归一化。超过 120k 的长度按满刻度绘制。
+
+## 对比报告设计
+
+对比报告仍输出为单个 HTML 文件，CSS 和 JS 全部内联。输入校验要求两个 zip 文件名都包含下划线，并且第一个下划线前的评测名一致，例如 `AIME_run1.zip` 和 `AIME_run2.zip` 的评测名前缀都是 `AIME`；不一致时抛出明确 `ValueError`。
+
+页面顶部展示两个文件名。核心指标箱线图从双列主体中提升到顶部统一对比，按同一指标一行排列：每行左侧渲染文件 1 的箱线图，右侧渲染文件 2 的箱线图。complete tokens、reasoning tokens、content tokens、used_time、total_used_time 使用全量箱线图；complete/reasoning/content tokens 继续额外展示过滤 0 后的“tokens推理成功数据”箱线图。箱线图的标尺规则与单报告一致。
+
+对比报告主体使用左右两列，左列对应文件 1，右列对应文件 2。每列保留基础信息、核心指标卡片、重试推理最终状态圆环图、异常摘要、response 长度点阵图和重试推理表。两列的 attempt 弹窗数据使用不同前缀写入同一个内联 JS payload，避免相同 req_id 冲突；重试表的搜索和筛选按钮也使用独立 DOM 前缀，左右两列互不影响。
 
 ## 格式歧义假设
 

@@ -18,6 +18,7 @@ BASE_CSS = """
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #ffffff; }
 main { max-width: 1240px; margin: 0 auto; padding: 24px; }
+main.compare-main { max-width: 1680px; }
 h1 { margin: 0 0 18px; font-size: 28px; }
 h2 { margin: 28px 0 12px; font-size: 20px; }
 h3 { margin: 20px 0 10px; font-size: 16px; }
@@ -99,6 +100,19 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .boxplot-row-title { color: var(--muted); font-size: 13px; font-weight: 650; margin: 12px 0 8px; }
 .sample-count { margin-left: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .boxplot-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); min-height: 178px; }
+.boxplot-card.empty { display: flex; flex-direction: column; justify-content: center; }
+.compare-file-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.compare-file-card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
+.compare-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.compare-column { min-width: 0; border-left: 1px solid var(--line); padding-left: 14px; }
+.compare-column:first-child { border-left: 0; padding-left: 0; }
+.compare-column .grid { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+.compare-column .card { padding: 10px; min-height: 68px; }
+.compare-column .value { font-size: 16px; }
+.compare-column table { font-size: 12px; }
+.compare-boxplot-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fbfcfe; }
+.compare-metric-label { font-weight: 650; margin-bottom: 8px; }
+.compare-boxplot-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .boxplot { position: relative; width: 78px; height: 84px; margin: 12px auto 0; border-left: 1px solid #dce3ee; border-bottom: 1px solid #dce3ee; }
 .boxplot .whisker { position: absolute; left: 38px; width: 2px; background: #475467; }
 .boxplot .cap { position: absolute; left: 29px; width: 20px; height: 2px; background: #475467; }
@@ -126,12 +140,20 @@ input[type="search"] { width: min(520px, 100%); padding: 10px 12px; border: 1px 
 .modal-body { padding: 14px 16px; overflow: auto; }
 .modal-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
 pre { background: #0f172a; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; max-height: 55vh; white-space: pre-wrap; word-break: break-word; }
+@media (max-width: 980px) {
+  .compare-file-row, .compare-columns, .compare-boxplot-pair { grid-template-columns: 1fr; }
+  .compare-column { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+}
 """
 
 BASE_JS = """
 window.__evalLogAnalyzer = window.__evalLogAnalyzer || {};
 const modalState = { current: null, full: false };
-const retryFilterState = { failureOnly: false, evalFailedOnly: false, finalSuccessOnly: false, finalFailedOnly: false };
+const retryFilterState = {};
+function elaRetryState(scope = '') {
+  if (!retryFilterState[scope]) retryFilterState[scope] = { failureOnly: false, evalFailedOnly: false, finalSuccessOnly: false, finalFailedOnly: false };
+  return retryFilterState[scope];
+}
 function elaData(id) { return window.__evalLogAnalyzer.attempts[id]; }
 function elaOpenAttempt(id) {
   const data = elaData(id);
@@ -169,44 +191,50 @@ function elaCopyJson() {
   const text = document.getElementById('modal-json').textContent;
   if (navigator.clipboard) navigator.clipboard.writeText(text);
 }
-function elaToggleFailureFilter() {
-  retryFilterState.failureOnly = !retryFilterState.failureOnly;
-  const button = document.getElementById('failure-filter');
-  if (button) button.classList.toggle('active', retryFilterState.failureOnly);
-  elaFilterRetry();
+function elaToggleFailureFilter(scope = '') {
+  const state = elaRetryState(scope);
+  state.failureOnly = !state.failureOnly;
+  const button = document.getElementById(`${scope}failure-filter`);
+  if (button) button.classList.toggle('active', state.failureOnly);
+  elaFilterRetry(scope);
 }
-function elaToggleEvalFailedFilter() {
-  retryFilterState.evalFailedOnly = !retryFilterState.evalFailedOnly;
-  const button = document.getElementById('eval-failed-filter');
-  if (button) button.classList.toggle('active', retryFilterState.evalFailedOnly);
-  elaFilterRetry();
+function elaToggleEvalFailedFilter(scope = '') {
+  const state = elaRetryState(scope);
+  state.evalFailedOnly = !state.evalFailedOnly;
+  const button = document.getElementById(`${scope}eval-failed-filter`);
+  if (button) button.classList.toggle('active', state.evalFailedOnly);
+  elaFilterRetry(scope);
 }
-function elaToggleFinalSuccessFilter() {
-  retryFilterState.finalSuccessOnly = !retryFilterState.finalSuccessOnly;
-  const button = document.getElementById('final-success-filter');
-  if (button) button.classList.toggle('active', retryFilterState.finalSuccessOnly);
-  elaFilterRetry();
+function elaToggleFinalSuccessFilter(scope = '') {
+  const state = elaRetryState(scope);
+  state.finalSuccessOnly = !state.finalSuccessOnly;
+  const button = document.getElementById(`${scope}final-success-filter`);
+  if (button) button.classList.toggle('active', state.finalSuccessOnly);
+  elaFilterRetry(scope);
 }
-function elaToggleFinalFailedFilter() {
-  retryFilterState.finalFailedOnly = !retryFilterState.finalFailedOnly;
-  const button = document.getElementById('final-failed-filter');
-  if (button) button.classList.toggle('active', retryFilterState.finalFailedOnly);
-  elaFilterRetry();
+function elaToggleFinalFailedFilter(scope = '') {
+  const state = elaRetryState(scope);
+  state.finalFailedOnly = !state.finalFailedOnly;
+  const button = document.getElementById(`${scope}final-failed-filter`);
+  if (button) button.classList.toggle('active', state.finalFailedOnly);
+  elaFilterRetry(scope);
 }
-function elaFilterRetry() {
-  const input = document.getElementById('retry-search');
+function elaFilterRetry(scope = '') {
+  const state = elaRetryState(scope);
+  const input = document.getElementById(`${scope}retry-search`);
   const keyword = (input ? input.value : '').trim().toLowerCase();
-  for (const row of document.querySelectorAll('[data-retry-row]')) {
+  const root = document.querySelector(`[data-retry-scope="${scope}"]`) || document;
+  for (const row of root.querySelectorAll('[data-retry-row]')) {
     const haystack = row.getAttribute('data-search') || '';
     const hasFailure = row.getAttribute('data-has-failure') === 'true';
     const evalFailed = row.getAttribute('data-eval-failed') === 'true';
     const finalSuccess = row.getAttribute('data-final-success') === 'true';
     const finalFailed = row.getAttribute('data-final-failed') === 'true';
     row.style.display = haystack.includes(keyword)
-      && (!retryFilterState.failureOnly || hasFailure)
-      && (!retryFilterState.evalFailedOnly || evalFailed)
-      && (!retryFilterState.finalSuccessOnly || finalSuccess)
-      && (!retryFilterState.finalFailedOnly || finalFailed) ? '' : 'none';
+      && (!state.failureOnly || hasFailure)
+      && (!state.evalFailedOnly || evalFailed)
+      && (!state.finalSuccessOnly || finalSuccess)
+      && (!state.finalFailedOnly || finalFailed) ? '' : 'none';
   }
 }
 """

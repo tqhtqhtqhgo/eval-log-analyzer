@@ -27,7 +27,7 @@ uv run python examples/run_analysis.py
 ## Python 函数调用示例
 
 ```python
-from eval_log_analyzer import analysis_html
+from eval_log_analyzer import analysis_html, compare_analysis_html
 
 html_path = analysis_html(
     zip_path="tests/fixtures/mini_eval.zip",
@@ -38,6 +38,16 @@ html_path = analysis_html(
     open_browser=False,
 )
 print(html_path)
+
+compare_html_path = compare_analysis_html(
+    left_zip_path="AIME_run1.zip",
+    right_zip_path="AIME_run2.zip",
+    output_html=None,
+    repeat_group_size=None,
+    max_attempt_columns=5,
+    open_browser=False,
+)
+print(compare_html_path)
 ```
 
 ## 输入 zip 文件要求
@@ -60,6 +70,8 @@ print(html_path)
 
 默认输出到 zip 同目录，文件名为 `{zip_stem}_analysis.html`。HTML 是单个静态文件，包含内联 CSS 和 JS，不使用 CDN，不需要启动服务，可以直接用浏览器打开。
 
+`compare_analysis_html(left_zip_path, right_zip_path, ...)` 会生成双列对比报告，默认文件名为 `{评测名前缀}_compare_analysis.html`。两个输入 zip 的文件名必须满足第一个下划线前的评测名一致，例如 `AIME_run1.zip` 和 `AIME_run2.zip` 可以对比，`AIME_run1.zip` 和 `MATH_run2.zip` 会报错。
+
 ## 页面功能
 
 基础信息区展示评测模型、用例集、创建时间、总题数、通过题数、通过率、裁判模型、log 文件名和 zip 文件名。通过题数和通过率根据 `export_data_list.json` 中每个对象的 `eval_result` 判断，支持 `"True"` / `"False"` 字符串。
@@ -75,6 +87,8 @@ print(html_path)
 重试推理表按计算出的 `hash_id` 排序，因此多次评测中同一题的位置会尽量保持一致。
 
 response 长度点阵图中每道题是一个点，x 轴是 response 长度，y 轴按稳定 hash 做轻微错位以减少重叠，图高为原始点阵图高度的 3 倍。推理失败点显示为黄色。把光标放在点上可以看到 id、req_id、hash、长度和评测结果，点击点可以查看最终 attempt 的 JSON。点阵图下方会排除推理失败题目，再分别展示做对题目和做错题目的 response 长度箱线图，并显示这两个图的总样本数。
+
+对比报告顶部展示两个 zip 文件名，并把核心指标箱线图按“同一指标一行”排列：每行左侧是文件 1 的箱线图，右侧是文件 2 的箱线图，例如 complete tokens 会在同一行左右并排比较。下方主体区域平行分成两列，每列保留基础信息、核心指标卡片、重试推理最终状态圆环图、异常摘要、response 长度点阵图和重试推理表。两列的重试表筛选互不影响，点击任一列的状态点仍会打开对应 attempt 的 JSON 弹窗。
 
 `analysis_html(..., enable_hash_repeat_chart=True)` 参数当前保留兼容，但页面不再显示 hash_id 聚合紧凑分布图和 hash_id 聚合图。
 

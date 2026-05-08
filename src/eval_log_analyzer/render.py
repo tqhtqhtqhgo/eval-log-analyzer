@@ -44,6 +44,62 @@ def render_html(
     return output_html
 
 
+def render_compare_html(
+    output_html: str,
+    left_metrics: Metrics,
+    left_traces: list[ReqTrace],
+    right_metrics: Metrics,
+    right_traces: list[ReqTrace],
+    left_label: str,
+    right_label: str,
+    max_attempt_columns: int = 5,
+) -> str:
+    """渲染两个评测日志的双列对比 HTML。"""
+    left_display_traces = _sorted_traces(left_traces)
+    right_display_traces = _sorted_traces(right_traces)
+    attempt_payload = {
+        **_attempt_payload(left_display_traces, "left::"),
+        **_attempt_payload(right_display_traces, "right::"),
+    }
+    js = (
+        "window.__evalLogAnalyzer = "
+        f"{{attempts: {to_json_script(attempt_payload)}, hashGroups: {{}}}};\n{BASE_JS}"
+    )
+    body = "\n".join(
+        [
+            "<main class=\"compare-main\">",
+            "<h1>评测日志对比报告</h1>",
+            f"<section><h2>对比文件</h2><div class=\"compare-file-row\">{_compare_file_card('文件 1', left_label)}{_compare_file_card('文件 2', right_label)}</div></section>",
+            _render_compare_core_boxplots(left_metrics, right_metrics, left_label, right_label),
+            "<div class=\"compare-columns\">",
+            _render_compare_column(
+                "文件 1",
+                left_label,
+                left_metrics,
+                left_display_traces,
+                "left-",
+                "left::",
+                max_attempt_columns,
+            ),
+            _render_compare_column(
+                "文件 2",
+                right_label,
+                right_metrics,
+                right_display_traces,
+                "right-",
+                "right::",
+                max_attempt_columns,
+            ),
+            "</div>",
+            "</main>",
+            _render_modal(),
+        ]
+    )
+    html_text = HTML_TEMPLATE.format(title="评测日志对比报告", css=BASE_CSS, body=body, js=js)
+    Path(output_html).write_text(html_text, encoding="utf-8")
+    return output_html
+
+
 def _render_basic_info(info: dict[str, Any]) -> str:
     items = [
         ("评测模型", info.get("model")),
@@ -57,6 +113,48 @@ def _render_basic_info(info: dict[str, Any]) -> str:
         ("zip 文件名", info.get("zip_name")),
     ]
     return "<section><h2>基础信息</h2><div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div></section>"
+
+
+def _compare_file_card(label: str, value: str) -> str:
+    return f"<div class=\"compare-file-card\"><div class=\"label\">{_escape(label)}</div><div class=\"value\">{_escape(value)}</div></div>"
+
+
+def _render_compare_column(
+    side_title: str,
+    file_label: str,
+    metrics: Metrics,
+    traces: list[ReqTrace],
+    dom_prefix: str,
+    attempt_prefix: str,
+    max_attempt_columns: int,
+) -> str:
+    return (
+        f"<article class=\"compare-column\"><h2>{_escape(side_title)}：{_escape(file_label)}</h2>"
+        f"{_render_basic_info(metrics.basic_info)}"
+        f"{_render_core_cards_without_boxplots(metrics)}"
+        f"{_render_retry_pie_chart(traces, metrics)}"
+        f"{_render_exception_summary(metrics.exception_summary)}"
+        f"{_render_response_beeswarm_chart(traces, metrics, attempt_prefix)}"
+        f"{_render_retry_table(traces, metrics, max_attempt_columns, dom_prefix, attempt_prefix)}"
+        "</article>"
+    )
+
+
+def _render_core_cards_without_boxplots(metrics: Metrics) -> str:
+    export = metrics.export_summary
+    trace = metrics.trace_summary
+    items = [
+        ("平均 complete tokens", export.get("avg_complete_tokens")),
+        ("平均 reasoning tokens", export.get("avg_reasoning_token")),
+        ("平均 content tokens", export.get("avg_content_token")),
+        ("平均 used_time", export.get("avg_used_time")),
+        ("平均 total_used_time", export.get("avg_total_used_time")),
+        ("retry req_id 数量", trace.get("retry_req_id_count")),
+        ("retry 最终成功数量", trace.get("retry_final_success_count")),
+        ("最终推理失败数量", trace.get("final_failed_count")),
+        ("推理成功题目数量（不含推理失败）", trace.get("final_success_count")),
+    ]
+    return "<section><h2>核心指标</h2><div class=\"grid\">" + "".join(_card(k, v) for k, v in items) + "</div></section>"
 
 
 def _render_core_cards(metrics: Metrics) -> str:
@@ -101,6 +199,69 @@ def _render_core_boxplots(boxplots: dict[str, Any]) -> str:
     if not all_charts and not nonzero_charts:
         return ""
     return f"<h3>核心指标箱线图</h3>{all_charts}{nonzero_charts}"
+
+
+def _render_compare_core_boxplots(
+    left_metrics: Metrics,
+    right_metrics: Metrics,
+    left_label: str,
+    right_label: str,
+) -> str:
+    left_boxplots = left_metrics.export_summary.get("boxplots") or {}
+    right_boxplots = right_metrics.export_summary.get("boxplots") or {}
+    all_items = [
+        ("complete tokens", "complete_tokens"),
+        ("reasoning tokens", "reasoning_token"),
+        ("content tokens", "content_token"),
+        ("used_time", "used_time"),
+        ("total_used_time", "total_used_time"),
+    ]
+    nonzero_items = [
+        ("complete tokens 非零", "complete_tokens_nonzero"),
+        ("reasoning tokens 非零", "reasoning_token_nonzero"),
+        ("content tokens 非零", "content_token_nonzero"),
+    ]
+    all_rows = _compare_boxplot_rows("全部数据", all_items, left_boxplots, right_boxplots, left_label, right_label)
+    nonzero_rows = _compare_boxplot_rows(
+        "tokens推理成功数据",
+        nonzero_items,
+        left_boxplots,
+        right_boxplots,
+        left_label,
+        right_label,
+    )
+    if not all_rows and not nonzero_rows:
+        return ""
+    return f"<section><h2>核心指标箱线图对比</h2>{all_rows}{nonzero_rows}</section>"
+
+
+def _compare_boxplot_rows(
+    title: str,
+    items: list[tuple[str, str]],
+    left_boxplots: dict[str, Any],
+    right_boxplots: dict[str, Any],
+    left_label: str,
+    right_label: str,
+) -> str:
+    rows = []
+    for metric_label, key in items:
+        left_boxplot = left_boxplots.get(key)
+        right_boxplot = right_boxplots.get(key)
+        if not left_boxplot and not right_boxplot:
+            continue
+        left_card = _boxplot_card(f"{left_label} · {metric_label}", left_boxplot) if left_boxplot else _empty_boxplot_card(left_label)
+        right_card = _boxplot_card(f"{right_label} · {metric_label}", right_boxplot) if right_boxplot else _empty_boxplot_card(right_label)
+        rows.append(
+            f"<div class=\"compare-boxplot-row\"><div class=\"compare-metric-label\">{_escape(metric_label)}</div>"
+            f"<div class=\"compare-boxplot-pair\">{left_card}{right_card}</div></div>"
+        )
+    if not rows:
+        return ""
+    return f"<div class=\"boxplot-row-title\">{_escape(title)}</div>{''.join(rows)}"
+
+
+def _empty_boxplot_card(label: str) -> str:
+    return f"<div class=\"boxplot-card empty\"><div class=\"label\">{_escape(label)}</div><div class=\"muted\">无数据</div></div>"
 
 
 def _boxplot_row(title: str, items: list[tuple[str, Any]]) -> str:
@@ -167,7 +328,13 @@ def _render_exception_summary(rows: list[dict[str, Any]]) -> str:
     )
 
 
-def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_columns: int) -> str:
+def _render_retry_table(
+    traces: list[ReqTrace],
+    metrics: Metrics,
+    max_attempt_columns: int,
+    dom_prefix: str = "",
+    attempt_prefix: str = "",
+) -> str:
     headers = "".join(f"<th>t{i}</th>" for i in range(1, max_attempt_columns + 1))
     rows = []
     for display_id, trace in enumerate(traces, start=1):
@@ -181,14 +348,14 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
             label = "推理成功" if attempt.success else "推理失败"
             attempt_cells.append(
                 f"<td><button class=\"status-btn\" title=\"{label}\" aria-label=\"{label}\" "
-                f"onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index)}')\">"
+                f"onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, attempt.attempt_index, attempt_prefix)}')\">"
                 f"<span class=\"status-square {status_class}\"></span></button></td>"
             )
         if len(trace.attempts) > max_attempt_columns:
-            attempt_cells[-1] = f"<td><button onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, trace.attempts[-1].attempt_index)}')\">更多</button></td>"
+            attempt_cells[-1] = f"<td><button onclick=\"elaOpenAttempt('{_attempt_id(trace.req_id, trace.attempts[-1].attempt_index, attempt_prefix)}')\">更多</button></td>"
         final_symbol = "推理通过" if trace.final_success else "推理失败"
         final_class = "final-ok" if trace.final_success else "final-bad"
-        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index, attempt_prefix) if trace.final_attempt else ""
         eval_result = metrics.eval_results.get(trace.req_id)
         eval_text = _eval_text(eval_result)
         eval_class = _status_class(trace, eval_result)
@@ -210,16 +377,16 @@ def _render_retry_table(traces: list[ReqTrace], metrics: Metrics, max_attempt_co
         )
     return (
         "<section><h2>重试推理表</h2>"
-        "<div class=\"toolbar\"><input id=\"retry-search\" type=\"search\" placeholder=\"搜索 req_id / hash_id / prompt / 失败原因\" oninput=\"elaFilterRetry()\">"
-        "<button id=\"failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter()\">只看过程失败</button>"
-        "<button id=\"eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter()\">只看做错</button>"
-        "<button id=\"final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter()\">只看推理成功</button>"
-        "<button id=\"final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter()\">只看推理失败</button></div>"
-        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终推理</th><th>评测结果</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>"
+        f"<div class=\"toolbar\"><input id=\"{dom_prefix}retry-search\" type=\"search\" placeholder=\"搜索 req_id / hash_id / prompt / 失败原因\" oninput=\"elaFilterRetry('{dom_prefix}')\">"
+        f"<button id=\"{dom_prefix}failure-filter\" type=\"button\" onclick=\"elaToggleFailureFilter('{dom_prefix}')\">只看过程失败</button>"
+        f"<button id=\"{dom_prefix}eval-failed-filter\" type=\"button\" onclick=\"elaToggleEvalFailedFilter('{dom_prefix}')\">只看做错</button>"
+        f"<button id=\"{dom_prefix}final-success-filter\" type=\"button\" onclick=\"elaToggleFinalSuccessFilter('{dom_prefix}')\">只看推理成功</button>"
+        f"<button id=\"{dom_prefix}final-failed-filter\" type=\"button\" onclick=\"elaToggleFinalFailedFilter('{dom_prefix}')\">只看推理失败</button></div>"
+        f"<table class=\"retry-table\"><thead><tr><th>id</th><th>req_id</th><th>hash_id</th>{headers}<th>最终推理</th><th>评测结果</th></tr></thead><tbody data-retry-scope=\"{dom_prefix}\">{''.join(rows)}</tbody></table></section>"
     )
 
 
-def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) -> str:
+def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics, attempt_prefix: str = "") -> str:
     points = []
     column_counts: dict[float, int] = {}
     max_column_count = 0
@@ -230,7 +397,7 @@ def _render_response_beeswarm_chart(traces: list[ReqTrace], metrics: Metrics) ->
         max_column_count = max(max_column_count, column_index + 1)
         top = _beeswarm_top(column_index)
         status = _status_class(trace, metrics.eval_results.get(trace.req_id))
-        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index) if trace.final_attempt else ""
+        final_id = _attempt_id(trace.req_id, trace.final_attempt.attempt_index, attempt_prefix) if trace.final_attempt else ""
         title = (
             f"id={display_id} req_id={trace.req_id} hash={stable_trace_hash(trace)} "
             f"长度={trace.final_response_length} 评测结果={_eval_text(metrics.eval_results.get(trace.req_id))}"
@@ -473,11 +640,11 @@ def to_json_script(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False).replace("</", "<\\/")
 
 
-def _attempt_payload(traces: list[ReqTrace]) -> dict[str, Any]:
+def _attempt_payload(traces: list[ReqTrace], attempt_prefix: str = "") -> dict[str, Any]:
     payload = {}
     for trace in traces:
         for attempt in trace.attempts:
-            payload[_attempt_id(trace.req_id, attempt.attempt_index)] = {
+            payload[_attempt_id(trace.req_id, attempt.attempt_index, attempt_prefix)] = {
                 "req_id": attempt.req_id,
                 "attempt_index": attempt.attempt_index,
                 "success": attempt.success,
@@ -490,5 +657,5 @@ def _attempt_payload(traces: list[ReqTrace]) -> dict[str, Any]:
     return payload
 
 
-def _attempt_id(req_id: str, attempt_index: int) -> str:
-    return f"{req_id}::{attempt_index}"
+def _attempt_id(req_id: str, attempt_index: int, attempt_prefix: str = "") -> str:
+    return f"{attempt_prefix}{req_id}::{attempt_index}"
